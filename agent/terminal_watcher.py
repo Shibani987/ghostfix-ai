@@ -408,6 +408,11 @@ class TerminalWatcher:
         print("STATUS: error")
         print(f"ERROR: {diagnostic.get('error_type', '')}")
         print(f"ROOT_CAUSE: {diagnostic.get('likely_root_cause') or diagnostic.get('root_cause', '')}")
+        evidence = diagnostic.get("evidence") or []
+        if evidence:
+            print(f"EVIDENCE: {len(evidence)}")
+            for item in evidence[:4]:
+                print(f"- {item}")
         print(f"NEXT_STEP: {next_step}")
         print(f"Next step: {next_step}")
         print(f"AUTO_FIX: {'yes' if auto_fix else 'no'}")
@@ -442,6 +447,9 @@ CAUSE:
 
 FIX:
 {diagnostic['suggested_fix']}
+
+EVIDENCE:
+{self._format_evidence(diagnostic.get('evidence') or [])}
 
 CONFIDENCE:
 {diagnostic['confidence']}%

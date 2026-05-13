@@ -155,9 +155,9 @@ def detect_language_for_path(path: str | None, command: str = "") -> str:
     suffix = Path(path or "").suffix.lower()
     if suffix == ".py" or "python" in text or "manage.py" in text or "uvicorn" in text:
         return "python"
-    if suffix in {".ts", ".tsx"} or "ts-node" in text or "tsx" in text:
+    if suffix in {".ts", ".tsx"} or "ts-node" in text or "tsx" in text or "tsc" in text:
         return "typescript"
-    if suffix in {".js", ".jsx", ".mjs", ".cjs"} or "npm" in text or "node" in text:
+    if suffix in {".js", ".jsx", ".mjs", ".cjs"} or "npm" in text or "pnpm" in text or "yarn" in text or "node" in text or "next" in text:
         return "javascript/node"
     return "unknown"
 

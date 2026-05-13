@@ -40,15 +40,22 @@ ghostfix watch "python app.py"
 ghostfix watch "flask run"
 ```
 
-## Node
+## Node, Next.js, React, And TypeScript
 
 ```powershell
 ghostfix watch "npm run dev"
+ghostfix watch "pnpm dev"
+ghostfix watch "next dev"
 ghostfix watch "npm run dev" --cwd demos/node_like
 ```
 
-Node and browser-style JavaScript errors are diagnosis-only in the current
-release.
+GhostFix detects common Node, Next.js, React, and TypeScript dev-server errors,
+including module-not-found, missing environment variables, build/syntax errors,
+port conflicts, TypeScript type errors, and hydration-style messages.
+
+These errors are diagnosis-only in the current release. GhostFix prints a
+suggested fix, but it does not edit JavaScript or TypeScript files and it does
+not run package-manager install commands.
 
 ## Rollback
 

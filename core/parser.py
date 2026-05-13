@@ -146,6 +146,20 @@ def _extract_runtime_error_guarded(output: str, command: str = "") -> dict | Non
             "kind": "port_in_use",
         }
 
+    next_block = _extract_next_error(text)
+    if next_block:
+        error_type = _next_error_type(next_block)
+        return {
+            "raw": next_block,
+            "type": error_type,
+            "qualified_type": error_type,
+            "message": _next_error_message(next_block),
+            "language": _language_from_text(text, command),
+            "framework": _framework_from_text(text, command),
+            "error_block": next_block,
+            "kind": "next_error",
+        }
+
     node_block = _extract_node_error(text)
     if node_block:
         first = NODE_ERROR_RE.search(node_block)
@@ -232,6 +246,56 @@ def _extract_node_error(text: str) -> str:
     return ""
 
 
+def _extract_next_error(text: str) -> str:
+    patterns = (
+        r"Module not found:\s*(?:Can't resolve|Cannot resolve)[\s\S]{0,1600}",
+        r"Import trace for requested module:[\s\S]{0,1200}",
+        r"(?:Failed to compile|Failed to build|Type error:|Parsing ecmascript source code failed|Hydration failed)[\s\S]{0,1600}",
+        r"Error:\s*(?:Missing|required|not set|undefined).{0,100}process\.env\.[A-Z][A-Z0-9_]+[\s\S]{0,800}",
+    )
+    for pattern in patterns:
+        match = re.search(pattern, text, re.IGNORECASE)
+        if match:
+            return _trim_frontend_block(match.group(0))
+    return ""
+
+
+def _trim_frontend_block(block: str) -> str:
+    lines = block.strip().splitlines()
+    trimmed = []
+    for line in lines:
+        stripped = line.strip()
+        if trimmed and stripped.startswith(("ready -", "event -", "wait -", "info  -", "Local:", "npm ERR!")):
+            break
+        trimmed.append(line)
+        if len(trimmed) >= 24:
+            break
+    return "\n".join(trimmed).strip()
+
+
+def _next_error_type(block: str) -> str:
+    lowered = block.lower()
+    if "module not found" in lowered or "can't resolve" in lowered or "cannot resolve" in lowered:
+        return "ModuleNotFoundError"
+    if "type error:" in lowered or re.search(r"\bTS\d{4}:", block):
+        return "TypeScriptError"
+    if "hydration failed" in lowered:
+        return "ReactHydrationError"
+    if "environment variable" in lowered or "process.env" in lowered:
+        return "MissingEnvironmentVariable"
+    if "syntaxerror" in lowered or "parsing ecmascript" in lowered or "failed to compile" in lowered:
+        return "BuildSyntaxError"
+    return "NextBuildError"
+
+
+def _next_error_message(block: str) -> str:
+    for line in block.splitlines():
+        stripped = line.strip()
+        if stripped:
+            return stripped
+    return "Next.js build/runtime error."
+
+
 def _extract_command_not_found(text: str) -> str:
     lowered = text.lower()
     if "uvicorn" not in lowered:
@@ -270,6 +334,10 @@ def _language_from_text(text: str, command: str) -> str:
 
 def _framework_from_text(text: str, command: str) -> str:
     combined = f"{command}\n{text}".lower()
+    if "next dev" in combined or "next build" in combined or "next/dist" in combined or ".next/" in combined or "next.js" in combined:
+        return "next.js"
+    if "react" in combined or "hydration" in combined:
+        return "react"
     if "manage.py" in combined or "django" in combined:
         return "django"
     if "uvicorn" in combined or "fastapi" in combined:

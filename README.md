@@ -44,6 +44,9 @@ ghostfix demo
 ```bash
 ghostfix run app.py
 ghostfix watch "python manage.py runserver"
+ghostfix watch "npm run dev"
+ghostfix watch "pnpm dev"
+ghostfix watch "next dev"
 ```
 
 ## Why GhostFix?
@@ -72,7 +75,9 @@ Production-minded local debugging CLI. Enterprise-evaluation-ready candidate. No
 - Safe deterministic Python auto-fix for a small allowlisted set of cases.
 - Watch mode for terminal and server processes.
 - Django, Flask, FastAPI, and Uvicorn startup/runtime diagnosis.
-- JavaScript, Node.js, TypeScript-style dev log, and PHP error detection.
+- JavaScript, Node.js, TypeScript, React, and Next.js dev-log diagnosis.
+- Framework-aware Next.js suggestions for module resolution, missing env vars, build/syntax errors, TypeScript errors, port conflicts, and hydration-style messages.
+- PHP error detection.
 - Brain v4 runtime routing as an optional guarded local reasoning layer.
 - Local incident history in `.ghostfix/incidents.jsonl`.
 - Local stats and redacted training-data exports for user-reviewed closed-beta feedback.
@@ -82,7 +87,7 @@ Production-minded local debugging CLI. Enterprise-evaluation-ready candidate. No
 
 ## What Does Not Work Yet
 
-- JavaScript, TypeScript, and PHP auto-fix are intentionally disabled.
+- JavaScript, TypeScript, React, Next.js, and PHP auto-fix are intentionally disabled.
 - Framework configuration fixes are diagnosis-only.
 - Repo-aware multi-file edits are not part of the current MVP.
 - Brain v4 output is advisory and cannot bypass safety policy.
@@ -95,7 +100,7 @@ Production-minded local debugging CLI. Enterprise-evaluation-ready candidate. No
 GhostFix is ready for local daily trial use, but it is still a beta-quality developer tool:
 
 - Python runtime diagnosis is the most mature path.
-- Node, JavaScript, TypeScript, and PHP support are diagnosis-only.
+- Node, JavaScript, TypeScript, React, Next.js, and PHP support are diagnosis-only.
 - Framework configuration issues are explained, not auto-edited.
 - Brain v4 is optional and advisory.
 - Auto-fix covers only narrow deterministic Python patches.
@@ -146,6 +151,7 @@ local developer beta, not an enterprise production platform.
 - It will never upload your code, logs, incidents, or feedback without an explicit feature and configuration.
 - It will never enable broad autonomous coding from watch mode.
 - It will never apply JavaScript, framework config, dependency install, database, network, or destructive filesystem fixes automatically.
+- It will never run `npm install`, `pnpm install`, or dependency installation automatically.
 - It will never treat model confidence alone as permission to edit files.
 
 ## Local-First Promise
