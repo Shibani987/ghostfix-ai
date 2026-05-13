@@ -13,9 +13,12 @@
 
 GhostFix is a local-first runtime debugging CLI that watches terminal and dev-server logs, detects crashes automatically, explains likely root causes, and applies only safety-gated deterministic Python fixes. No API key required. Local-first by default.
 
-## See it in action
 
-[Watch the demo](assets/demo/ghostfix-demo.gif)
+## See GhostFix in Action
+
+<p align="center">
+  <img src="assets/demo/ghostfix-demo.gif" width="1000"/>
+</p>
 
 ## Quick install
 
