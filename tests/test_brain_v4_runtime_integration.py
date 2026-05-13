@@ -284,6 +284,10 @@ class BrainV4RuntimeIntegrationTests(unittest.TestCase):
     def test_real_world_failures_have_contextual_rule_causes(self):
         report = evaluate_runtime_cases(Path("tests/real_world_failures"), brain=True, brain_mode="auto")
 
+        # Temporary debug output for CI
+        for row in report["rows"]:
+            print(f"DEBUG: {row['file']} - error_type: {row.get('detected_error_type')} - root_cause: {row.get('cause')} - decision_source_path: {row['decision_source_path']} - brain_skipped_reason: {row.get('brain_skipped_reason')} - escalation_reason: {row['escalation_reason']} - error_type_match: {row['error_type_match']}")
+
         self.assertEqual(report["record_count"], 10)
         self.assertEqual(report["detected_error_count"], 10)
         self.assertGreater(report["root_cause_match_rate"], 0.60)
