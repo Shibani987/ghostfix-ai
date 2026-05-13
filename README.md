@@ -15,7 +15,7 @@ GhostFix is a local-first runtime debugging CLI that watches terminal and dev-se
 
 ## See it in action
 
-[Watch the demo](assets/demo/ghostfix-demo.mp4)
+[Watch the demo](assets/demo/ghostfix-demo.gif)
 
 ## Quick install
 
