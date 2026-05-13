@@ -5,10 +5,21 @@
 </p>
 
 <p align="center">
-  <a href="https://github.com/ghostfix-ai/ghostfix-ai/actions/workflows/ci.yml"><img src="https://github.com/ghostfix-ai/ghostfix-ai/actions/workflows/ci.yml/badge.svg" alt="CI"></a>
-  <a href="https://pypi.org/project/ghostfix-ai/"><img src="https://img.shields.io/pypi/v/ghostfix-ai.svg" alt="PyPI"></a>
-  <a href="https://pypi.org/project/ghostfix-ai/"><img src="https://img.shields.io/pypi/pyversions/ghostfix-ai.svg" alt="Python"></a>
-  <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-blue.svg" alt="License"></a>
+  <a href="https://github.com/Shibani987/ghostfix-ai/actions/workflows/ci.yml">
+    <img src="https://github.com/Shibani987/ghostfix-ai/actions/workflows/ci.yml/badge.svg" alt="CI">
+  </a>
+
+  <a href="https://pypi.org/project/ghostfix-ai/">
+    <img src="https://img.shields.io/pypi/v/ghostfix-ai.svg" alt="PyPI">
+  </a>
+
+  <a href="https://pypi.org/project/ghostfix-ai/">
+    <img src="https://img.shields.io/pypi/pyversions/ghostfix-ai.svg" alt="Python">
+  </a>
+
+  <a href="LICENSE">
+    <img src="https://img.shields.io/badge/license-MIT-blue.svg" alt="License">
+  </a>
 </p>
 
 GhostFix is a local-first runtime debugging CLI that watches terminal and dev-server logs, detects crashes automatically, explains likely root causes, and applies only safety-gated deterministic Python fixes. No API key required. Local-first by default.
