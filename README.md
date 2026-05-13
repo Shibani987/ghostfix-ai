@@ -1,105 +1,54 @@
 # GhostFix AI
 
-[![CI](https://github.com/ghostfix-ai/ghostfix-ai/actions/workflows/ci.yml/badge.svg)](https://github.com/ghostfix-ai/ghostfix-ai/actions/workflows/ci.yml)
-[![PyPI](https://img.shields.io/pypi/v/ghostfix-ai.svg)](https://pypi.org/project/ghostfix-ai/)
-[![Python](https://img.shields.io/pypi/pyversions/ghostfix-ai.svg)](https://pypi.org/project/ghostfix-ai/)
-[![License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
+<p align="center">
+  <strong>No prompts. Just logs. Instant diagnosis.</strong>
+</p>
 
-**Promptless runtime debugging for developers.**
+<p align="center">
+  <a href="https://github.com/ghostfix-ai/ghostfix-ai/actions/workflows/ci.yml"><img src="https://github.com/ghostfix-ai/ghostfix-ai/actions/workflows/ci.yml/badge.svg" alt="CI"></a>
+  <a href="https://pypi.org/project/ghostfix-ai/"><img src="https://img.shields.io/pypi/v/ghostfix-ai.svg" alt="PyPI"></a>
+  <a href="https://pypi.org/project/ghostfix-ai/"><img src="https://img.shields.io/pypi/pyversions/ghostfix-ai.svg" alt="Python"></a>
+  <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-blue.svg" alt="License"></a>
+</p>
 
-GhostFix watches terminal and dev-server logs, detects crashes automatically, explains likely root causes, and applies only safety-gated deterministic Python fixes. No API key required. Local-first by default.
+GhostFix is a local-first runtime debugging CLI that watches terminal and dev-server logs, detects crashes automatically, explains likely root causes, and applies only safety-gated deterministic Python fixes. No API key required. Local-first by default.
+
+## See it in action
+
+[Watch the demo](assets/demo/ghostfix-demo.mp4)
+
+## Quick install
 
 ```bash
 pip install ghostfix-ai
 ghostfix setup
+ghostfix demo
+```
+
+## Debug a crash
+
+```bash
 ghostfix run app.py
 ghostfix watch "python manage.py runserver"
 ```
 
-```text
-GhostFix AI
-promptless runtime debugging
+## Why GhostFix?
 
-STATUS: error
-ERROR: SyntaxError
-ROOT_CAUSE: The function definition is missing a colon.
-AUTO_FIX: yes
-ROLLBACK_AVAILABLE: no
-No code was modified.
-```
-
-## 30 Second Start
-
-```bash
-ghostfix --version
-ghostfix doctor
-ghostfix quickstart
-ghostfix demo
-```
-
-`ghostfix setup` creates `.ghostfix/config.json` with local-only defaults, telemetry disabled, export disabled unless manually invoked, auto-fix disabled by default, and Brain mode off unless explicitly configured.
-
-## Why GhostFix
-
-| What you do | What GhostFix does |
+| Feature | Description |
 | --- | --- |
-| Run a script | Detects Python tracebacks and explains the failure |
-| Start a dev server | Watches logs and catches boot/runtime crashes |
-| Hit a safe Python syntax/JSON case | Shows a deterministic patch preview |
-| Need trust | Records audit data and rollback metadata locally |
-| Work in JS/TS/PHP today | Diagnosis only; no auto-fix yet |
+| Promptless runtime debugging | No prompts needed—just run your code and get instant diagnosis from logs. |
+| Local-first by default | Works entirely offline, no API keys or cloud dependencies required. |
+| No API key required | All processing happens locally on your machine. |
+| Watch mode for dev servers | Monitors long-running processes and catches errors in real-time. |
+| Safety-gated Python fixes | Only applies narrow, deterministic fixes with preview and rollback. |
 
-## Product Status
+## Safety-first
 
-GhostFix is a production-minded, local-first runtime debugging CLI and an enterprise-evaluation-ready candidate. It is not a hosted enterprise observability platform, autonomous software engineer, or unrestricted code editor.
+GhostFix does not silently rewrite code. Fixes are offered only for narrow deterministic Python cases, with patch preview, validation, backup, and rollback metadata.
 
-Current sweet spot: local Python, Django, Flask, FastAPI, Uvicorn, and terminal/dev-server debugging loops.
+## Current status
 
-## Live Demo
-
-```bash
-ghostfix demo
-```
-
-The demo creates a temporary crashing Python file, runs GhostFix in dry-run mode, shows the diagnosis, previews the deterministic patch path, and proves that no code was modified.
-
-For a watch-mode clip:
-
-```bash
-ghostfix watch "python demos/python_name_error.py" --dry-run
-```
-
-## Demo Assets
-
-Recommended landing-page media:
-
-- 30-45 second GIF: `ghostfix setup`, `ghostfix demo`, `ghostfix watch "python demos/python_name_error.py" --dry-run`.
-- Screenshot 1: `ghostfix doctor --no-color`.
-- Screenshot 2: `ghostfix demo`.
-- Screenshot 3: `ghostfix audit` after an applied safe fix.
-- YouTube flow: install, setup, run crash, show safety block, show dry-run patch preview, mention rollback.
-
-Detailed recording guidance is in [docs/DEMO_ASSETS.md](docs/DEMO_ASSETS.md).
-
-## Why It Is Different
-
-GhostFix is not ChatGPT, Copilot, or Cursor. Those tools are strongest when you ask questions or edit code with them directly. GhostFix starts from runtime behavior:
-
-- Watches terminal, script, and server logs.
-- Detects errors automatically from stdout and stderr.
-- Works with terminal commands, Django-style servers, FastAPI/Uvicorn logs, Python scripts, and early Node.js dev flows.
-- Uses deterministic rules first for speed, repeatability, and safety.
-- Escalates harder unknown cases to optional Brain v4 reasoning.
-- Keeps every auto-fix behind conservative safety gates.
-- Produces local incident-style records in verbose and benchmark modes.
-
-## Who It Is For
-
-- Students learning Python who want clear traceback explanations.
-- Backend developers debugging runtime failures from the terminal.
-- Python, Django, FastAPI, and Flask developers working in local dev loops.
-- Early Node.js users who want diagnosis from server logs, with fixes kept advisory.
-- Builders who prefer local tools and do not want cloud inference as a requirement.
+Production-minded local debugging CLI. Enterprise-evaluation-ready candidate. Not a hosted observability platform or unrestricted autonomous coding agent.
 
 ## What Works Now
 
