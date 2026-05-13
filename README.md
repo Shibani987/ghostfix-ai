@@ -9,13 +9,13 @@
     <img src="https://github.com/Shibani987/ghostfix-ai/actions/workflows/ci.yml/badge.svg" alt="CI">
   </a>
 
-  <a href="https://pypi.org/project/ghostfix-ai/">
-    <img src="https://img.shields.io/pypi/v/ghostfix-ai.svg" alt="PyPI">
-  </a>
+ <a href="https://pypi.org/project/ghostfix-ai/">
+  <img src="https://img.shields.io/pypi/v/ghostfix-ai?cacheSeconds=60" alt="PyPI">
+</a>
 
-  <a href="https://pypi.org/project/ghostfix-ai/">
-    <img src="https://img.shields.io/pypi/pyversions/ghostfix-ai.svg" alt="Python">
-  </a>
+<a href="https://pypi.org/project/ghostfix-ai/">
+  <img src="https://img.shields.io/pypi/pyversions/ghostfix-ai?cacheSeconds=60" alt="Python">
+</a>
 
   <a href="LICENSE">
     <img src="https://img.shields.io/badge/license-MIT-blue.svg" alt="License">
