@@ -488,7 +488,7 @@ def _contextual_rule_guidance(
                 f"Set {missing_key} before running the app, or read it with validation and a clear configuration error.",
                 95,
             )
-        if missing_key and (any(marker in combined_lower for marker in ("dataframe", "pd.", "pandas", ".columns", "orders[")) or "[" in failing_line):
+        if missing_key and (any(marker in combined_lower for marker in ("dataframe", "pd.", "pandas", ".columns", "orders[")) or re.search(r'\[.*\]', failing_line)):
             return (
                 f"The pandas DataFrame does not contain the requested '{missing_key}' column.",
                 "Validate the DataFrame schema or guard column access before using the missing column.",
