@@ -72,14 +72,14 @@ class ReleaseVerifierTests(unittest.TestCase):
             root = Path.cwd()
             dist = root / "dist"
             dist.mkdir()
-            (dist / "ghostfix_ai-0.2.0-py3-none-any.whl").write_text("", encoding="utf-8")
-            (dist / "ghostfix-ai-0.2.0.tar.gz").write_text("", encoding="utf-8")
+            (dist / "ghostfix_ai-0.3.0-py3-none-any.whl").write_text("", encoding="utf-8")
+            (dist / "ghostfix-ai-0.3.0.tar.gz").write_text("", encoding="utf-8")
             (dist / "tmpk2rsp5sp").write_text("", encoding="utf-8")
 
             expanded = _expand_globs(["python", "-m", "twine", "check", "dist/*"], root)
 
-        self.assertIn(str(dist / "ghostfix_ai-0.2.0-py3-none-any.whl"), expanded)
-        self.assertIn(str(dist / "ghostfix-ai-0.2.0.tar.gz"), expanded)
+        self.assertIn(str(dist / "ghostfix_ai-0.3.0-py3-none-any.whl"), expanded)
+        self.assertIn(str(dist / "ghostfix-ai-0.3.0.tar.gz"), expanded)
         self.assertNotIn(str(dist / "tmpk2rsp5sp"), expanded)
 
 

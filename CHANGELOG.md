@@ -2,6 +2,22 @@
 
 All notable public-release changes are tracked here.
 
+## 0.3.0 - 2026-05-13
+
+### Added
+
+- JavaScript, Node.js, React, TypeScript, and Next.js dev-log diagnosis.
+- Framework-aware Next.js context detection from `package.json`, `next.config.*`, `tsconfig.json`, `app/`, `pages/`, and `src/`.
+- Structured suggestions for Next.js module resolution failures, missing environment variables, build/syntax errors, TypeScript type errors, port conflicts, and hydration-style messages.
+- Watch examples for `npm run dev`, `pnpm dev`, and `next dev`.
+
+### Safety
+
+- Non-Python auto-fix remains disabled. JavaScript, TypeScript, React, Next.js, Node.js, PHP, and framework configuration fixes are suggestion-only.
+- GhostFix does not run `npm install`, `pnpm install`, or package-manager install commands automatically.
+- Python deterministic auto-fix remains safety-gated with patch preview, validation, backup, audit, and rollback metadata.
+- Brain, local LLM, and retriever confidence still cannot bypass the safety policy.
+
 ## 0.2.0 - 2026-05-09
 
 ### Added

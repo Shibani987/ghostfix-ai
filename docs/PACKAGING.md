@@ -28,7 +28,7 @@ Create a clean virtual environment and install the built wheel:
 ```powershell
 python -m venv .venv-packaging-test
 .\.venv-packaging-test\Scripts\Activate.ps1
-python -m pip install dist\ghostfix_ai-0.2.0-py3-none-any.whl
+python -m pip install dist\ghostfix_ai-0.3.0-py3-none-any.whl
 ghostfix --version
 ghostfix doctor
 ```
