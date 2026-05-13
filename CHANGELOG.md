@@ -2,6 +2,51 @@
 
 All notable public-release changes are tracked here.
 
+## 0.6.0 - 2026-05-13
+
+### Added
+
+- Runtime/tooling diagnosis for missing package managers, runtimes, executables, project-root files, and framework entrypoints.
+- Preflight watch checks for common wrong-directory cases before launching long-running commands.
+- Explicit deterministic error types such as `PnpmNotInstalledError`, `PhpRuntimeMissingError`, `DjangoManagePyMissingError`, `UvicornNotInstalledError`, `FlaskAppDiscoveryError`, `PackageJsonMissingError`, `MissingEntryPointError`, and `InvalidProjectRootError`.
+- Guarded create-file preview for a minimal `package.json` when a package-manager command is run outside a Node project.
+
+### Safety
+
+- GhostFix still does not install packages, edit secrets, start services, or create full framework projects.
+- Project setup creation remains allowlisted, diff-previewed, confirmation-gated, audited, and rollback-capable.
+
+## 0.5.0 - 2026-05-13
+
+### Added
+
+- Command-aware runtime inference for Python scripts, Django, Flask, FastAPI/Uvicorn, Node/Express, Next.js, React/Vite, TypeScript builds, PHP, and Laravel-style local serve commands.
+- Unified watch diagnosis fields for language, framework, runtime, failing file/line, evidence, suggested fix, auto-fix availability, block reason, and rollback availability.
+- Framework-specific suggestions for Django, Flask, FastAPI/Uvicorn, Next.js, React/Vite, Node/Express, TypeScript, PHP, and Laravel startup/runtime logs.
+- Guarded PHP missing-semicolon patch previews validated with `php -l` when PHP is available.
+
+### Safety
+
+- Auto-fix remains allowlisted, deterministic, diff-previewed, backed up, audited, and rollback-capable.
+- Risky framework/config/service errors remain suggestion-only.
+- GhostFix still never installs dependencies or edits auth, database, payment, security, secret, `.env`, or deployment configuration files automatically.
+
+## 0.4.0 - 2026-05-13
+
+### Added
+
+- Broader multi-language structured diagnosis for Python, JavaScript, TypeScript, Node.js, Express, React, Next.js, Django, Flask, and FastAPI logs.
+- Live Next.js/Node runtime diagnosis for Ollama failures, `ECONNREFUSED`, fetch failures, missing env vars, API route 500s, port conflicts, hydration errors, invalid hook calls, module/import/export issues, and TypeScript errors.
+- Framework-aware suggestions for Next.js API routes, `.env.local`, external service URLs, React render/hook problems, Express middleware/config issues, and Node module/import failures.
+- Guarded JS/TS patch previews for narrow allowlisted fixes, currently missing semicolon repair and exact relative import extension repair.
+
+### Safety
+
+- Python deterministic auto-fix remains the mature path.
+- JS/TS guarded fixes require exact local targets, patch preview, confirmation, backup, audit, and rollback metadata.
+- GhostFix still does not install packages, edit secrets, modify `.env`, start services, or auto-edit auth, database, payment, network, or security-sensitive code.
+- Brain, local LLM, and retriever confidence still cannot bypass the safety policy.
+
 ## 0.3.0 - 2026-05-13
 
 ### Added

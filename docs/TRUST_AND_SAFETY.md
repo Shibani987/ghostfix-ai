@@ -64,7 +64,13 @@ ghostfix audit --last 10
 
 ## Deterministic Safety Policy
 
-Auto-fix remains limited to deterministic Python patches that pass validation.
+Auto-fix remains limited to deterministic allowlisted patches that pass
+validation. Python is the mature path. JS/TS support is intentionally tiny and
+limited to exact one-line source repairs such as a missing semicolon or an exact
+relative import extension when the target file already exists. PHP support is
+limited to simple missing-semicolon repair and uses `php -l` when PHP is
+available.
+
 Brain output, retriever matches, confidence values, or local model suggestions
 cannot bypass the safety policy.
 
@@ -72,7 +78,7 @@ cannot bypass the safety policy.
 
 GhostFix does not auto-edit:
 
-- JavaScript, TypeScript, PHP, or Node files
+- JavaScript, TypeScript, PHP, or Node files outside the explicit JS/TS/PHP allowlist
 - framework configuration with project intent
 - dependency installation
 - database operations
@@ -94,3 +100,22 @@ No code was modified.
 
 This is expected behavior. The tool should prefer a clear diagnosis over a risky
 edit.
+
+## JS/TS Guarded Fixes
+
+When a JS/TS fix is allowlisted, GhostFix shows a patch preview first. Applied
+fixes require confirmation, create a backup, write an audit row, and include
+rollback metadata for `ghostfix rollback last`.
+
+GhostFix still will not:
+
+- run `npm install`, `pnpm install`, or `yarn install`
+- create or edit `.env` or `.env.local`
+- start local services such as Ollama
+- change auth, database, payment, network, or security-sensitive code
+- apply framework config changes automatically
+
+Tooling/setup fixes are limited to safe local file creation such as a minimal
+`package.json`, `.env.example`, `__init__.py`, or an empty template file after
+preview and confirmation. GhostFix will not create full framework projects or
+guess business logic.

@@ -248,6 +248,8 @@ def _extract_node_error(text: str) -> str:
 
 def _extract_next_error(text: str) -> str:
     patterns = (
+        r"(?:Could not connect to Ollama|OLLAMA_BASE_URL|ECONNREFUSED|fetch failed|500 Internal Server Error)[\s\S]{0,1200}",
+        r"\b(?:GET|POST|PUT|PATCH|DELETE|OPTIONS|HEAD)\s+/\S+\s+500\b[\s\S]{0,1200}",
         r"Module not found:\s*(?:Can't resolve|Cannot resolve)[\s\S]{0,1600}",
         r"Import trace for requested module:[\s\S]{0,1200}",
         r"(?:Failed to compile|Failed to build|Type error:|Parsing ecmascript source code failed|Hydration failed)[\s\S]{0,1600}",
@@ -283,6 +285,12 @@ def _next_error_type(block: str) -> str:
         return "ReactHydrationError"
     if "environment variable" in lowered or "process.env" in lowered:
         return "MissingEnvironmentVariable"
+    if "ollama" in lowered:
+        return "OllamaConnectionError"
+    if "econnrefused" in lowered or "fetch failed" in lowered:
+        return "ConnectionRefusedError"
+    if re.search(r"\b(?:GET|POST|PUT|PATCH|DELETE|OPTIONS|HEAD)\s+/\S+\s+500\b", block, re.IGNORECASE) or "500 internal server error" in lowered:
+        return "Http500Error"
     if "syntaxerror" in lowered or "parsing ecmascript" in lowered or "failed to compile" in lowered:
         return "BuildSyntaxError"
     return "NextBuildError"
@@ -298,13 +306,22 @@ def _next_error_message(block: str) -> str:
 
 def _extract_command_not_found(text: str) -> str:
     lowered = text.lower()
-    if "uvicorn" not in lowered:
-        return ""
-    patterns = (
+    patterns = [
         r"'uvicorn' is not recognized as an internal or external command[^\n]*",
         r"uvicorn: command not found[^\n]*",
         r"no module named uvicorn[^\n]*",
-    )
+        r"'pnpm' is not recognized as an internal or external command[^\n]*",
+        r"pnpm: command not found[^\n]*",
+        r"'npm' is not recognized as an internal or external command[^\n]*",
+        r"npm: command not found[^\n]*",
+        r"'node' is not recognized as an internal or external command[^\n]*",
+        r"node: command not found[^\n]*",
+        r"'php' is not recognized as an internal or external command[^\n]*",
+        r"php: command not found[^\n]*",
+        r"'flask' is not recognized as an internal or external command[^\n]*",
+        r"flask: command not found[^\n]*",
+        r"no module named flask[^\n]*",
+    ]
     for pattern in patterns:
         match = re.search(pattern, text, re.IGNORECASE)
         if match:

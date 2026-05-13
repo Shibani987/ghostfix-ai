@@ -22,7 +22,7 @@
   </a>
 </p>
 
-GhostFix is a local-first runtime debugging CLI that watches terminal and dev-server logs, detects crashes automatically, explains likely root causes, and applies only safety-gated deterministic Python fixes. No API key required. Local-first by default.
+GhostFix is a local-first runtime debugging CLI that watches terminal and dev-server logs, detects crashes automatically, explains likely root causes, and applies only safety-gated deterministic fixes. Python auto-fix is the mature path; JavaScript and TypeScript fixes are limited to guarded allowlisted patch previews. No API key required. Local-first by default.
 
 
 ## See GhostFix in Action
@@ -47,7 +47,26 @@ ghostfix watch "python manage.py runserver"
 ghostfix watch "npm run dev"
 ghostfix watch "pnpm dev"
 ghostfix watch "next dev"
+ghostfix watch "uvicorn main:app --reload"
+ghostfix watch "flask run"
+ghostfix watch "php artisan serve"
 ```
+
+## Command Matrix
+
+| Command | Runtime Inference | Auto-fix posture |
+| --- | --- | --- |
+| `python app.py`, `python main.py`, `python run.py` | Python script, Flask/FastAPI hints when imports exist | Mature Python allowlist |
+| `python manage.py runserver` | Django | Suggestions plus Python allowlist |
+| `flask run` | Flask | Suggestions plus Python allowlist |
+| `uvicorn main:app --reload` | FastAPI/Uvicorn | Suggestions plus Python allowlist |
+| `node server.js`, `npm start`, `npm run dev` | Node/Express or package-script framework | JS/TS tiny allowlist only |
+| `npm run dev`, `pnpm dev`, `next dev`, `vite` | Next.js or React/Vite from package markers | JS/TS tiny allowlist only |
+| `tsc --noEmit`, `npm run build` | TypeScript/build | Suggestions; simple JS/TS allowlist when exact source target exists |
+| `php artisan serve`, `php index.php` | PHP/Laravel | PHP missing-semicolon allowlist only |
+
+GhostFix also detects tooling and wrong-root failures before or after startup:
+missing `pnpm`, `npm`, `node`, `php`, `uvicorn`, `flask`, missing `manage.py`, missing `package.json`, missing `server.js`, missing Laravel `artisan`, missing `tsconfig.json`, and invalid Next.js roots.
 
 ## Why GhostFix?
 
@@ -57,11 +76,11 @@ ghostfix watch "next dev"
 | Local-first by default | Works entirely offline, no API keys or cloud dependencies required. |
 | No API key required | All processing happens locally on your machine. |
 | Watch mode for dev servers | Monitors long-running processes and catches errors in real-time. |
-| Safety-gated Python fixes | Only applies narrow, deterministic fixes with preview and rollback. |
+| Safety-gated fixes | Python fixes are mature; JS/TS fixes are limited, allowlisted, previewed, backed up, and rollback-aware. |
 
 ## Safety-first
 
-GhostFix does not silently rewrite code. Fixes are offered only for narrow deterministic Python cases, with patch preview, validation, backup, and rollback metadata.
+GhostFix does not silently rewrite code. Fixes are offered only for narrow deterministic cases, with patch preview, validation, backup, and rollback metadata. Non-allowlisted framework, config, dependency, external-service, auth, database, payment, and security-sensitive cases are suggestion-only.
 
 ## Current status
 
@@ -73,10 +92,12 @@ Production-minded local debugging CLI. Enterprise-evaluation-ready candidate. No
 - Structured streaming log-event pipeline for noisy, partial, and long-running logs.
 - Repo-aware context for project roots, dependency files, framework hints, and related local files.
 - Safe deterministic Python auto-fix for a small allowlisted set of cases.
+- Guarded JS/TS patch previews for very low-risk allowlisted fixes such as missing semicolon repair and exact relative import extension repair.
+- PHP/Laravel basic log diagnosis and guarded PHP missing-semicolon previews when `php -l` validation is available.
 - Watch mode for terminal and server processes.
 - Django, Flask, FastAPI, and Uvicorn startup/runtime diagnosis.
 - JavaScript, Node.js, TypeScript, React, and Next.js dev-log diagnosis.
-- Framework-aware Next.js suggestions for module resolution, missing env vars, build/syntax errors, TypeScript errors, port conflicts, and hydration-style messages.
+- Framework-aware Next.js suggestions for module resolution, missing env vars, API route 500s, Ollama/local-service failures, build/syntax errors, TypeScript errors, port conflicts, and hydration-style messages.
 - PHP error detection.
 - Brain v4 runtime routing as an optional guarded local reasoning layer.
 - Local incident history in `.ghostfix/incidents.jsonl`.
@@ -87,7 +108,8 @@ Production-minded local debugging CLI. Enterprise-evaluation-ready candidate. No
 
 ## What Does Not Work Yet
 
-- JavaScript, TypeScript, React, Next.js, and PHP auto-fix are intentionally disabled.
+- Broad JavaScript, TypeScript, React, Next.js, and PHP auto-fix is intentionally disabled.
+- JS/TS patching is limited and experimental; only allowlisted one-line source repairs may be offered.
 - Framework configuration fixes are diagnosis-only.
 - Repo-aware multi-file edits are not part of the current MVP.
 - Brain v4 output is advisory and cannot bypass safety policy.
@@ -100,10 +122,10 @@ Production-minded local debugging CLI. Enterprise-evaluation-ready candidate. No
 GhostFix is ready for local daily trial use, but it is still a beta-quality developer tool:
 
 - Python runtime diagnosis is the most mature path.
-- Node, JavaScript, TypeScript, React, Next.js, and PHP support are diagnosis-only.
+- Node, JavaScript, TypeScript, React, Next.js, and PHP support is strongest for diagnosis and suggestions; JS/TS patching is intentionally narrow.
 - Framework configuration issues are explained, not auto-edited.
 - Brain v4 is optional and advisory.
-- Auto-fix covers only narrow deterministic Python patches.
+- Auto-fix covers narrow deterministic Python patches plus tiny JS/TS/PHP/setup allowlists with confirmation, backup or create-file rollback metadata, audit, and rollback.
 - Long-running watch mode is bounded and duplicate-aware, but it is not a full observability system.
 
 ## Safety Guarantees
@@ -216,7 +238,7 @@ For a local wheel rehearsal:
 
 ```powershell
 python -m build
-python -m pip install dist\ghostfix_ai-0.3.0-py3-none-any.whl
+python -m pip install dist\ghostfix_ai-0.6.0-py3-none-any.whl
 ghostfix --version
 ```
 

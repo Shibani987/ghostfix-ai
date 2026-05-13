@@ -121,7 +121,7 @@ SAFETY:
         print("DETERMINISTIC_VALIDATOR_RESULT")
 
     _print_plain_summary(data, decision, autofix, patch, evidence)
-    console.print(Panel(content, title="GhostFix Brain", border_style="cyan"))
+    console.print(Panel(content, title="GhostFix Diagnosis", border_style="cyan"))
 
 
 def _legacy_compact_content(data) -> str:

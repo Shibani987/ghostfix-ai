@@ -29,7 +29,7 @@ class WatchCliSmokeTests(unittest.TestCase):
         self.assertNotEqual(result.returncode, 0)
         text = output.getvalue()
         self.assertIn("NameError", text)
-        self.assertIn("GhostFix Brain", text)
+        self.assertIn("GhostFix Diagnosis", text)
         self.assertIn("Watch mode diagnosis only", text)
 
     def test_cli_watch_smoke_uses_command_argument(self):
@@ -43,7 +43,7 @@ class WatchCliSmokeTests(unittest.TestCase):
 
         self.assertNotEqual(result.exit_code, 2)
         self.assertIn("RuntimeError", result.output)
-        self.assertIn("GhostFix Brain", result.output)
+        self.assertIn("GhostFix Diagnosis", result.output)
 
     def test_node_watch_diagnosis_never_autofixes(self):
         watcher = TerminalWatcher("npm run dev", auto_fix=False, verbose=False)
@@ -133,7 +133,7 @@ class WatchCliSmokeTests(unittest.TestCase):
         self.assertNotEqual(result.returncode, 0)
         text = output.getvalue()
         self.assertIn("Cannot find module", text)
-        self.assertIn("GhostFix Brain", text)
+        self.assertIn("GhostFix Diagnosis", text)
 
 
 if __name__ == "__main__":

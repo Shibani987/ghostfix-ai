@@ -25,6 +25,8 @@ from core.log_events import LogEventKind, LogEventPipeline, LogSourceType
 from core.patch_validator import PatchValidator
 from core.parser import extract_runtime_error
 from core.root_cause_analyzer import RootCauseAnalyzer
+from core.runtime_detector import infer_runtime_profile
+from core.tooling_diagnostics import diagnose_tooling
 from ml.feedback_logger import log_decision_feedback
 
 
@@ -34,6 +36,8 @@ MAX_HANDLED_TRACEBACK_KEYS = 256
 MAX_REPEATED_DUPLICATE_TRACEBACKS = 25
 MAX_STREAM_BUFFER_SIZE = 128_000
 MAX_STREAM_EVENT_SIZE = 32_000
+MAX_RUNTIME_LOG_LINES = 60
+MAX_HANDLED_LANGUAGE_KEYS = 256
 
 
 @dataclass
@@ -124,10 +128,19 @@ class TerminalWatcher:
         self._handled_tracebacks: set[str] = set()
         self._handled_traceback_order: Deque[str] = deque()
         self._duplicate_traceback_counts: dict[str, int] = {}
+        self._recent_runtime_lines: Deque[str] = deque(maxlen=MAX_RUNTIME_LOG_LINES)
+        self._handled_language_keys: set[str] = set()
+        self._handled_language_order: Deque[str] = deque()
+        self.runtime_profile = infer_runtime_profile(command=command, cwd=self.cwd)
         self._last_traceback = ""
 
     def watch(self) -> WatchResult:
         console.print(f"GhostFix watching command:\n{self.command}\n")
+        preflight = diagnose_tooling(self.command, cwd=self.cwd)
+        if preflight:
+            self._last_traceback = preflight.get("message", "")
+            self._handle_language_diagnostic(preflight)
+            return WatchResult(traceback=self._last_traceback, returncode=1)
         detected: List[str] = []
         pipeline = LogEventPipeline(
             source_type=LogSourceType.SUBPROCESS,
@@ -151,6 +164,7 @@ class TerminalWatcher:
         assert process.stdout is not None
         for line in process.stdout:
             self._safe_write(line)
+            self._maybe_handle_streaming_language_error(line)
             for event in pipeline.feed(line, stream="stdout"):
                 if event.kind == LogEventKind.PYTHON_TRACEBACK:
                     detected.append(event.text)
@@ -209,6 +223,82 @@ class TerminalWatcher:
         normalized = re.sub(r"0x[0-9a-fA-F]+", "0xADDR", normalized)
         normalized = "\n".join(line.rstrip() for line in normalized.splitlines() if line.strip())
         return hashlib.sha256(normalized.encode("utf-8", errors="replace")).hexdigest()
+
+    def _maybe_handle_streaming_language_error(self, line: str) -> bool:
+        self._recent_runtime_lines.append(str(line))
+        if not self._looks_like_streaming_runtime_boundary(line):
+            return False
+        block = "\n".join(self._recent_runtime_lines)
+        diagnostic = diagnose_non_python(block, command=self.command, cwd=self.cwd)
+        if not diagnostic or diagnostic.get("error_type") == "UnknownError":
+            return False
+        key = self._language_diagnostic_key(diagnostic)
+        if key in self._handled_language_keys:
+            return False
+        self._remember_language_key(key)
+        self._last_traceback = block[-MAX_TRACEBACK_CAPTURE_SIZE:]
+        self._handle_language_diagnostic(diagnostic)
+        return True
+
+    def _looks_like_streaming_runtime_boundary(self, line: str) -> bool:
+        text = str(line or "").strip().lower()
+        if not text:
+            return False
+        if "could not connect to ollama" in text or "ollama_base_url" in text:
+            return True
+        if "econnrefused" in text or "connection refused" in text:
+            return True
+        if "fetch failed" in text and self._recent_runtime_buffer_has_error_context():
+            return True
+        if ("localhost" in text or "127.0.0.1" in text or "::1" in text) and any(
+            token in text for token in ("failed to fetch", "fetch failed", "failed to connect", "connect failed", "refused")
+        ):
+            return True
+        if re.search(r"\b(?:get|post|put|patch|delete|options|head)\s+/\S+\s+500\b", text):
+            return self._recent_runtime_buffer_has_error_context()
+        if "500 internal server error" in text or re.search(r"\bstatus\s*[:=]\s*500\b", text):
+            return True
+        if ("environment variable" in text or "env var" in text or "process.env." in text) and any(
+            token in text for token in ("missing", "required", "not set", "undefined")
+        ):
+            return True
+        return False
+
+    def _recent_runtime_buffer_has_error_context(self) -> bool:
+        block = "\n".join(self._recent_runtime_lines).lower()
+        return any(
+            token in block
+            for token in (
+                "error:",
+                "exception",
+                "failed",
+                "could not connect",
+                "econnrefused",
+                "connection refused",
+                "process.env.",
+                "environment variable",
+            )
+        )
+
+    def _language_diagnostic_key(self, diagnostic: dict) -> str:
+        parts = [
+            diagnostic.get("language", ""),
+            diagnostic.get("framework", ""),
+            diagnostic.get("error_type", ""),
+            diagnostic.get("root_cause", ""),
+            diagnostic.get("message", ""),
+        ]
+        normalized = "\n".join(str(part).strip().lower() for part in parts if part)
+        normalized = re.sub(r"\b\d+ms\b", "Nms", normalized)
+        normalized = re.sub(r":\d{2,5}\b", ":PORT", normalized)
+        return hashlib.sha256(normalized.encode("utf-8", errors="replace")).hexdigest()
+
+    def _remember_language_key(self, key: str) -> None:
+        self._handled_language_keys.add(key)
+        self._handled_language_order.append(key)
+        while len(self._handled_language_order) > MAX_HANDLED_LANGUAGE_KEYS:
+            old_key = self._handled_language_order.popleft()
+            self._handled_language_keys.discard(old_key)
 
     def _handle_traceback(self, traceback: str) -> None:
         console.print("\n[error detected]\n", style="bold red", markup=False)
@@ -407,19 +497,40 @@ class TerminalWatcher:
         auto_fix = bool(diagnostic.get("auto_fix_available", False))
         print("STATUS: error")
         print(f"ERROR: {diagnostic.get('error_type', '')}")
+        print(f"LANGUAGE: {diagnostic.get('language', 'unknown')}")
+        print(f"FRAMEWORK: {diagnostic.get('framework', 'unknown')}")
+        print(f"RUNTIME: {diagnostic.get('runtime') or self.runtime_profile.runtime}")
+        print(f"FAILING_FILE: {diagnostic.get('file', '')}")
+        print(f"FAILING_LINE: {diagnostic.get('line') or ''}")
         print(f"ROOT_CAUSE: {diagnostic.get('likely_root_cause') or diagnostic.get('root_cause', '')}")
         evidence = diagnostic.get("evidence") or []
         if evidence:
             print(f"EVIDENCE: {len(evidence)}")
             for item in evidence[:4]:
                 print(f"- {item}")
+        route = diagnostic.get("route") or ""
+        if route:
+            print(f"ROUTE: {route}")
+        print(f"SUGGESTED_FIX: {next_step}")
         print(f"NEXT_STEP: {next_step}")
         print(f"Next step: {next_step}")
         print(f"AUTO_FIX: {'yes' if auto_fix else 'no'}")
+        print(f"AUTO_FIX_AVAILABLE={'yes' if auto_fix else 'no'}")
+        block_reason = diagnostic.get("why_auto_fix_blocked") or diagnostic.get("safety_reason") or ""
+        if not auto_fix:
+            print(f"WHY_AUTO_FIX_BLOCKED: {block_reason}")
         print(f"Auto-fix available: {'yes' if auto_fix else 'no'}")
         print("ROLLBACK_AVAILABLE: no")
         print("Rollback available: no")
-        if not auto_fix:
+        patch_block = diagnostic.get("patch_block") or {}
+        patch_preview = diagnostic.get("patch_preview") or patch_block.get("patch") or ""
+        if patch_preview:
+            print("PATCH_PREVIEW:")
+            print(patch_preview)
+        rollback_metadata = {}
+        if auto_fix:
+            rollback_metadata = self._maybe_apply_language_patch(diagnostic, patch_block, patch_preview)
+        else:
             print("No code was changed")
         record_incident(
             make_incident(
@@ -433,11 +544,18 @@ class TerminalWatcher:
                 confidence=diagnostic.get("confidence", 0),
                 auto_fix_available=diagnostic.get("auto_fix_available", False),
                 resolved_after_fix=False,
+                rollback_metadata=rollback_metadata,
             ),
             root=Path(self.cwd),
         )
         content = f"""LANGUAGE:
 {diagnostic['language']}
+
+FRAMEWORK:
+{diagnostic.get('framework') or 'unknown'}
+
+RUNTIME:
+{diagnostic.get('runtime') or self.runtime_profile.runtime}
 
 ERROR_TYPE:
 {diagnostic['error_type']}
@@ -451,11 +569,14 @@ FIX:
 EVIDENCE:
 {self._format_evidence(diagnostic.get('evidence') or [])}
 
+ROUTE:
+{diagnostic.get('route') or ''}
+
 CONFIDENCE:
 {diagnostic['confidence']}%
 
 AUTO_FIX_AVAILABLE:
-no
+{'yes' if diagnostic.get('auto_fix_available') else 'no'}
 """
         if self.verbose:
             content += f"""
@@ -477,9 +598,72 @@ SOURCE:
 SAFETY_REASON:
 {diagnostic['safety_reason']}
 """
-        console.print(Panel(content, title="GhostFix Brain", border_style="cyan"))
+        console.print(Panel(content, title="GhostFix Diagnosis", border_style="cyan"))
+
+    def _maybe_apply_language_patch(self, diagnostic: dict, patch_block: dict, patch_preview: str) -> dict:
+        if not patch_block or not patch_block.get("available"):
+            print(f"WHY_AUTO_FIX_BLOCKED: {diagnostic.get('why_auto_fix_blocked') or diagnostic.get('safety_reason')}")
+            print("No code was changed")
+            return {}
+        validation = self.validator.validate(patch_block)
+        if not validation.ok:
+            print(f"WHY_AUTO_FIX_BLOCKED: {validation.reason}")
+            print("No code was changed")
+            record_fix_audit(
+                target_file=patch_block.get("file_path", ""),
+                patch=patch_preview,
+                validator_result=validation.reason,
+                rollback_available=False,
+                user_confirmed=False,
+                root=Path(self.cwd),
+            )
+            return {}
+        if self.dry_run:
+            print("DRY_RUN: enabled")
+            print("No code will be modified")
+            record_fix_audit(
+                target_file=patch_block.get("file_path", ""),
+                patch=patch_preview,
+                validator_result="dry-run; patch not applied",
+                rollback_available=False,
+                user_confirmed=False,
+                root=Path(self.cwd),
+            )
+            return {}
+        if not Confirm.ask("Apply non-Python allowlisted patch?", default=False):
+            print("No code was changed")
+            record_fix_audit(
+                target_file=patch_block.get("file_path", ""),
+                patch=patch_preview,
+                validator_result="User declined",
+                rollback_available=False,
+                user_confirmed=False,
+                root=Path(self.cwd),
+            )
+            return {}
+        result = self.validator.apply_with_backup_and_compile(patch_block)
+        record_fix_audit(
+            target_file=patch_block.get("file_path", ""),
+            backup_path=result.get("backup") or "",
+            patch=patch_preview,
+            validator_result=result.get("reason") or "",
+            rollback_available=bool((result.get("rollback_metadata") or {}).get("backup")),
+            user_confirmed=True,
+            root=Path(self.cwd),
+        )
+        if not result.get("applied"):
+            print(f"WHY_AUTO_FIX_BLOCKED: {result.get('reason')}")
+            print("No code was changed")
+            return result.get("rollback_metadata") or {}
+        print(f"Backup created: {result.get('backup')}")
+        print("Rollback is available.")
+        return result.get("rollback_metadata") or {}
 
     def _runtime_diagnostic(self, extracted: Optional[dict], full_output: str) -> Optional[dict]:
+        tooling = diagnose_tooling(self.command, cwd=self.cwd, output=full_output)
+        # Command-output evidence wins over static tooling guesses
+        if tooling and not extracted:
+            return tooling
         if extracted and extracted.get("kind") in {
             "port_in_use",
             "missing_env_var",

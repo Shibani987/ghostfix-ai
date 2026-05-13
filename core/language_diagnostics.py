@@ -5,17 +5,21 @@ import json
 from pathlib import Path
 from typing import Any
 
+from core.js_autofix import build_js_patch_plan, patch_block_from_plan
+from core.php_autofix import build_php_patch_plan, patch_block_from_plan as php_patch_block_from_plan
+from core.runtime_detector import infer_runtime_profile
+
 
 def detect_language(command: str = "", output: str = "", file_path: str | None = None) -> str:
     text = f"{command}\n{output}\n{file_path or ''}".lower()
     suffix = Path(file_path or "").suffix.lower()
-    if suffix == ".py" or re.search(r"\bpython\b|traceback \(most recent call last\):", text):
+    if suffix == ".py" or re.search(r"\bpython\b|\bflask\b|\buvicorn\b|manage\.py|traceback \(most recent call last\):", text):
         return "python"
     if suffix in {".ts", ".tsx", ".mts", ".cts"} or re.search(r"\b(ts-node|tsx|tsc)\b|\.tsx?\b|typescript|type error:", text):
         return "typescript"
-    if suffix in {".js", ".jsx", ".mjs", ".cjs"} or re.search(r"\b(node|npm|npx|pnpm|yarn|next)\b|\.jsx?\b|node:|react|webpack", text):
+    if suffix in {".js", ".jsx", ".mjs", ".cjs"} or re.search(r"\b(node|npm|npx|pnpm|yarn|next|vite)\b|\.jsx?\b|node:|react|webpack", text):
         return "javascript/node"
-    if suffix == ".php" or re.search(r"\bphp\b|php (fatal error|parse error|warning|notice)", text):
+    if suffix == ".php" or re.search(r"\bphp\b|artisan serve|php (fatal error|parse error|warning|notice)", text):
         return "php"
     return "unknown"
 
@@ -36,10 +40,36 @@ def _diagnose_javascript(output: str, command: str, cwd: str | None, language: s
     likely = "Node.js failed at runtime. Inspect the stack trace and failing line before changing code."
     fix = "Review the stack trace and fix the failing JavaScript or TypeScript statement/import."
     confidence = 55
+    profile = infer_runtime_profile(command=command, cwd=cwd, output=output)
     context = _framework_context(cwd, command)
-    framework = _detect_js_framework(output, command, context, language)
+    framework = profile.framework if profile.language in {"javascript/node", "typescript"} and profile.framework != "unknown" else _detect_js_framework(output, command, context, language)
     evidence = _context_evidence(output, command, context)
+    if profile.dev_server_type != "unknown":
+        evidence.append(f"runtime profile: {profile.dev_server_type}")
+    route = _js_route(output)
+    if route:
+        evidence.append(f"route/API endpoint {route}")
 
+    ollama_match = re.search(
+        r"Could not connect to Ollama|OLLAMA_BASE_URL|ollama.{0,120}(?:ECONNREFUSED|fetch failed|failed to connect|connect)",
+        output,
+        re.IGNORECASE | re.DOTALL,
+    )
+    econnrefused_match = re.search(
+        r"(?:connect\s+)?ECONNREFUSED\s+(?:(?:127\.0\.0\.1|localhost|\[?::1\]?)(?::\d+)?)?",
+        output,
+        re.IGNORECASE,
+    )
+    localhost_failed_match = re.search(
+        r"(?:localhost|127\.0\.0\.1|::1).{0,120}(?:connection refused|failed to fetch|fetch failed|failed to connect|connect failed)",
+        output,
+        re.IGNORECASE | re.DOTALL,
+    )
+    http_500_match = re.search(
+        r"\b(?:GET|POST|PUT|PATCH|DELETE|OPTIONS|HEAD)\s+(/\S+)\s+500\b|(?:status\s*[:=]\s*500|500\s+Internal Server Error)",
+        output,
+        re.IGNORECASE,
+    )
     module_match = re.search(r"Cannot find module ['\"]([^'\"]+)['\"]", output)
     esm_match = re.search(r"ERR_MODULE_NOT_FOUND.*?Cannot find (?:package|module) ['\"]([^'\"]+)['\"]", output, re.DOTALL)
     next_module_match = re.search(r"Module not found:\s*(?:Can't resolve|Can(?:not|'t) resolve)\s+['\"]([^'\"]+)['\"]", output, re.IGNORECASE)
@@ -54,6 +84,12 @@ def _diagnose_javascript(output: str, command: str, cwd: str | None, language: s
     hydration_match = re.search(r"Hydration (?:failed|error)|server rendered HTML didn't match the client|Text content does not match server-rendered HTML", output, re.IGNORECASE)
     invalid_hook_match = re.search(r"Invalid hook call|Hooks can only be called inside", output, re.IGNORECASE)
     react_element_match = re.search(r"Element type is invalid|Objects are not valid as a React child", output, re.IGNORECASE)
+    missing_export_match = re.search(
+        r"(?:does not provide an export named|Attempted import error:)\s+['\"]?([A-Za-z_$][\w$]*)['\"]?",
+        output,
+        re.IGNORECASE,
+    )
+    missing_middleware_match = re.search(r"(?:body-parser|express\.json|req\.body).{0,120}(?:undefined|missing|not parsed)", output, re.IGNORECASE | re.DOTALL)
     syntax_build_match = re.search(
         r"(?:Failed to compile|SyntaxError:|Parsing ecmascript source code failed|Unexpected token|Unexpected end of input|Expected .+? got .+)",
         output,
@@ -64,21 +100,55 @@ def _diagnose_javascript(output: str, command: str, cwd: str | None, language: s
     npm_match = re.search(r"npm ERR!\s+(.+)", output)
     npm_package_json_missing = re.search(r"npm ERR!.*(?:ENOENT|could not read package\.json|package\.json).*", output, re.IGNORECASE | re.DOTALL)
     port_match = re.search(r"\b(EADDRINUSE|address already in use|listen EADDRINUSE)\b.*?(?::(\d+))?", output, re.IGNORECASE | re.DOTALL)
+    vite_module_match = re.search(r"(?:Failed to resolve import|Does the file exist\?)\s*['\"]?([^'\"\n]+)?", output, re.IGNORECASE)
 
-    if npm_package_json_missing:
+    if ollama_match:
+        error_type = "OllamaConnectionError"
+        message = _matching_line(output, ollama_match) or "Could not connect to Ollama."
+        root_cause = "ollama_connection_failed"
+        likely = "The Next.js/Node backend tried to call Ollama, but the Ollama service is not reachable at OLLAMA_BASE_URL."
+        if route:
+            likely += f" The failure surfaced while handling `{route}`."
+        fix = "Start Ollama locally, verify OLLAMA_BASE_URL, and test the Ollama endpoint before rerunning the dev server."
+        confidence = 95
+    elif econnrefused_match or localhost_failed_match:
+        match = econnrefused_match or localhost_failed_match
+        target = _connection_target(output)
+        error_type = "ConnectionRefusedError"
+        message = _matching_line(output, match) or "A local backend connection was refused."
+        root_cause = "localhost_connection_refused" if target else "backend_connection_refused"
+        likely = "The server tried to call a local dependency, but nothing accepted the connection"
+        likely += f" at `{target}`." if target else "."
+        if route:
+            likely += f" The failure surfaced while handling `{route}`."
+        fix = "Start the dependent local service, verify the configured URL/port, and restart or retry the Next.js request."
+        confidence = 92
+    elif http_500_match:
+        error_type = "Http500Error"
+        route = route or (http_500_match.group(1) if http_500_match.lastindex else "")
+        message = _matching_line(output, http_500_match) or "A Next.js route returned HTTP 500."
+        root_cause = "next_backend_dependency_failure" if framework == "next.js" else "backend_dependency_failure"
+        likely = "A server-side route/API handler returned HTTP 500, usually because a backend dependency or route exception failed."
+        if route:
+            likely += f" The failing endpoint appears to be `{route}`."
+        fix = "Inspect the server-side exception above the 500 line, verify required services and environment variables, then retry the route."
+        confidence = 86
+    elif npm_package_json_missing:
         error_type = "NpmPackageJsonMissingError"
         message = "npm could not find package.json."
         root_cause = "npm_package_json_missing"
         likely = "npm was run outside a Node project or package.json is missing."
         fix = "cd into the project folder or create package.json with npm init."
         confidence = 94
-    elif next_module_match or module_match or esm_match:
-        missing = (next_module_match or module_match or esm_match).group(1)
+    elif next_module_match or module_match or esm_match or vite_module_match:
+        missing = (next_module_match or module_match or esm_match or vite_module_match).group(1) or "the requested module"
         error_type = "Cannot find module" if module_match else "ERR_MODULE_NOT_FOUND"
         if next_module_match:
             error_type = "ModuleNotFoundError"
+        if vite_module_match:
+            error_type = "ViteModuleResolutionError"
         message = f"Cannot find module '{missing}'"
-        root_cause = "next_module_not_found" if framework == "next.js" else "js_module_not_found"
+        root_cause = "next_module_not_found" if framework == "next.js" else ("vite_module_not_found" if framework.startswith("vite") else "js_module_not_found")
         trace = _first_trace_line(next_import_trace.group(1)) if next_import_trace else ""
         likely = f"{_framework_name(framework)} could not resolve `{missing}` from an import or require path."
         if trace:
@@ -97,6 +167,14 @@ def _diagnose_javascript(output: str, command: str, cwd: str | None, language: s
             "Do not commit secret values."
         )
         confidence = 90
+    elif missing_export_match:
+        symbol = missing_export_match.group(1)
+        error_type = "MissingExportError"
+        message = _matching_line(output, missing_export_match) or f"Missing export {symbol}."
+        root_cause = "missing_named_export"
+        likely = f"The import references `{symbol}`, but the target module does not expose that named export."
+        fix = "Check the source module exports and the import statement. If this is a typo, rename the import/export to the exact existing symbol."
+        confidence = 84
     elif hydration_match:
         error_type = "ReactHydrationError"
         message = _matching_line(output, hydration_match) or "Hydration failed."
@@ -118,6 +196,13 @@ def _diagnose_javascript(output: str, command: str, cwd: str | None, language: s
         likely = "A React hook is being called outside a function component/custom hook, inside a conditional path, or with duplicate React versions."
         fix = "Call hooks only at the top level of function components/custom hooks and check for duplicate React packages."
         confidence = 87
+    elif missing_middleware_match:
+        error_type = "ExpressMiddlewareError"
+        message = _matching_line(output, missing_middleware_match) or "Express request middleware may be missing."
+        root_cause = "express_missing_middleware"
+        likely = "An Express route appears to read request data before the required parsing middleware is configured."
+        fix = "Add the appropriate middleware near app setup, for example express.json() for JSON request bodies, then rerun the server."
+        confidence = 78
     elif react_element_match:
         error_type = "ReactRenderError"
         message = _matching_line(output, react_element_match) or "React render error."
@@ -166,7 +251,7 @@ def _diagnose_javascript(output: str, command: str, cwd: str | None, language: s
         port = port_match.group(2) or ""
         message = f"Port {port} is already in use." if port else "A dev server port is already in use."
         root_cause = "port_already_in_use"
-        likely = "The dev server could not bind its configured port because another process is already listening there."
+        likely = f"{_framework_name(framework)} could not bind its configured port because another process is already listening there."
         fix = "Stop the process using that port or start the dev server on a different port."
         confidence = 90
     elif npm_match:
@@ -180,7 +265,7 @@ def _diagnose_javascript(output: str, command: str, cwd: str | None, language: s
     file_path, line = _js_location(output)
     if file_path:
         evidence.append(f"reported location {file_path}:{line or '?'}")
-    return _schema(
+    diagnostic = _schema(
         language=language,
         error_type=error_type,
         message=message,
@@ -192,7 +277,12 @@ def _diagnose_javascript(output: str, command: str, cwd: str | None, language: s
         suggested_fix=fix,
         confidence=confidence,
         evidence=evidence,
+        route=route,
+        runtime=profile.runtime,
+        dev_server_type=profile.dev_server_type,
     )
+    _attach_js_patch_metadata(diagnostic, cwd)
+    return diagnostic
 
 
 def _diagnose_php(output: str, command: str, cwd: str | None) -> dict[str, Any]:
@@ -202,11 +292,28 @@ def _diagnose_php(output: str, command: str, cwd: str | None) -> dict[str, Any]:
     likely = "PHP failed at runtime. Inspect the error text and reported file/line."
     fix = "Review the reported PHP file and fix the failing statement."
     confidence = 55
+    profile = infer_runtime_profile(command=command, cwd=cwd, output=output)
 
     kind_match = re.search(r"PHP (Fatal error|Parse error|Warning|Notice):\s*(.+?)(?: in | on line |\n|$)", output, re.DOTALL)
+    artisan_env_match = re.search(r"(?:No application encryption key has been specified|APP_KEY|\.env)", output, re.IGNORECASE)
+    port_match = re.search(r"(?:address already in use|EADDRINUSE|Failed to listen).{0,120}(?::(\d+))?", output, re.IGNORECASE | re.DOTALL)
     detail = kind_match.group(2).strip() if kind_match else output
 
-    if kind_match:
+    if artisan_env_match:
+        error_type = "LaravelEnvironmentError"
+        message = _matching_line(output, artisan_env_match) or "Laravel environment/app key is missing."
+        root_cause = "laravel_env_or_app_key_missing"
+        likely = "Laravel cannot start because required local environment configuration such as APP_KEY or .env is missing."
+        fix = "Create local Laravel environment configuration manually and run the appropriate Laravel key generation command yourself; GhostFix will not edit .env."
+        confidence = 88
+    elif port_match:
+        error_type = "PortInUse"
+        message = f"Port {port_match.group(1)} is already in use." if port_match.group(1) else "A PHP/Laravel server port is already in use."
+        root_cause = "port_already_in_use"
+        likely = "The PHP/Laravel dev server could not bind its configured port because another process is already listening there."
+        fix = "Stop the process using that port or start the PHP/Laravel server on a different port."
+        confidence = 86
+    elif kind_match:
         kind = kind_match.group(1)
         message = detail
         if kind == "Parse error":
@@ -245,18 +352,22 @@ def _diagnose_php(output: str, command: str, cwd: str | None) -> dict[str, Any]:
             confidence = 78
 
     file_path, line = _php_location(output)
-    return _schema(
+    diagnostic = _schema(
         language="php",
         error_type=error_type,
         message=message,
         file=file_path,
         line=line,
-        framework="php",
+        framework=profile.framework if profile.framework != "unknown" else "php",
         root_cause=root_cause,
         likely_root_cause=likely,
         suggested_fix=fix,
         confidence=confidence,
+        runtime=profile.runtime,
+        dev_server_type=profile.dev_server_type,
     )
+    _attach_php_patch_metadata(diagnostic, cwd)
+    return diagnostic
 
 
 def _schema(
@@ -272,6 +383,9 @@ def _schema(
     suggested_fix: str,
     confidence: int,
     evidence: list[str] | None = None,
+    route: str = "",
+    runtime: str = "unknown",
+    dev_server_type: str = "unknown",
 ) -> dict[str, Any]:
     return {
         "language": language,
@@ -280,16 +394,106 @@ def _schema(
         "file": file,
         "line": line,
         "framework": framework,
+        "runtime": runtime,
+        "dev_server_type": dev_server_type,
         "root_cause": root_cause,
         "likely_root_cause": likely_root_cause,
         "suggested_fix": suggested_fix,
         "evidence": evidence or [],
+        "route": route,
         "confidence": confidence,
         "source": "language_rule",
         "auto_fix_available": False,
         "safe_to_autofix": False,
+        "patch_preview": "",
+        "patch_block": {},
         "safety_reason": "Auto-fix is disabled for non-Python languages.",
+        "why_auto_fix_blocked": "No allowlisted deterministic patch is available for this non-Python error.",
     }
+
+
+def _attach_php_patch_metadata(diagnostic: dict[str, Any], cwd: str | None) -> None:
+    if diagnostic.get("language") != "php":
+        return
+    if diagnostic.get("root_cause") in {"laravel_env_or_app_key_missing", "port_already_in_use", "php_class_not_found", "php_failed_opening_required"}:
+        diagnostic["why_auto_fix_blocked"] = "PHP/Laravel config, dependency, env, port, and autoload issues require manual review."
+        return
+    plan = build_php_patch_plan(diagnostic, cwd=cwd)
+    if not plan.available:
+        diagnostic["why_auto_fix_blocked"] = plan.reason
+        return
+    diagnostic["auto_fix_available"] = True
+    diagnostic["safe_to_autofix"] = True
+    diagnostic["patch_preview"] = plan.preview
+    diagnostic["patch_block"] = php_patch_block_from_plan(plan)
+    diagnostic["safety_reason"] = plan.validation
+    diagnostic["why_auto_fix_blocked"] = ""
+
+
+def _attach_js_patch_metadata(diagnostic: dict[str, Any], cwd: str | None) -> None:
+    if diagnostic.get("language") not in {"javascript/node", "typescript"}:
+        return
+    if _js_auto_fix_forbidden(diagnostic):
+        diagnostic["safety_reason"] = "Auto-fix is disabled for non-Python languages."
+        diagnostic["why_auto_fix_blocked"] = _js_block_reason(diagnostic)
+        return
+    plan = build_js_patch_plan(diagnostic, cwd=cwd)
+    if not plan.available:
+        diagnostic["safety_reason"] = "Auto-fix is disabled for non-Python languages."
+        diagnostic["why_auto_fix_blocked"] = plan.reason
+        return
+    diagnostic["auto_fix_available"] = True
+    diagnostic["safe_to_autofix"] = True
+    diagnostic["patch_preview"] = plan.preview
+    diagnostic["patch_block"] = patch_block_from_plan(plan)
+    diagnostic["safety_reason"] = plan.validation or "Allowlisted deterministic JS/TS patch preview."
+    diagnostic["why_auto_fix_blocked"] = ""
+
+
+def _js_auto_fix_forbidden(diagnostic: dict[str, Any]) -> bool:
+    root = diagnostic.get("root_cause")
+    return root in {
+        "ollama_connection_failed",
+        "localhost_connection_refused",
+        "backend_connection_refused",
+        "next_backend_dependency_failure",
+        "backend_dependency_failure",
+        "next_missing_env_var",
+        "js_missing_env_var",
+        "port_already_in_use",
+        "express_missing_middleware",
+        "react_hydration_mismatch",
+        "react_invalid_hook_call",
+        "react_invalid_render_value",
+        "typescript_type_error",
+        "js_type_error",
+        "js_reference_error",
+        "js_unhandled_promise_rejection",
+        "npm_script_failed",
+        "npm_package_json_missing",
+    }
+
+
+def _js_block_reason(diagnostic: dict[str, Any]) -> str:
+    root = diagnostic.get("root_cause")
+    reasons = {
+        "ollama_connection_failed": "external service/config issue; GhostFix will not start services or edit .env files.",
+        "localhost_connection_refused": "external service/config issue; GhostFix will not start services or change URLs automatically.",
+        "backend_connection_refused": "external service/config issue; GhostFix will not modify backend integration code automatically.",
+        "next_backend_dependency_failure": "server route/API dependency failure; manual review required.",
+        "backend_dependency_failure": "backend dependency failure; manual review required.",
+        "next_missing_env_var": "environment/config issue; GhostFix may suggest .env.example guidance but will not write secrets.",
+        "js_missing_env_var": "environment/config issue; GhostFix will not create or modify secret-bearing .env files.",
+        "port_already_in_use": "process/port conflict; GhostFix will not stop processes or change server ports automatically.",
+        "express_missing_middleware": "framework setup change requires manual review.",
+        "react_hydration_mismatch": "rendering behavior mismatch requires component-level review.",
+        "react_invalid_hook_call": "React hook placement can change runtime behavior and requires manual review.",
+        "react_invalid_render_value": "render output change requires manual review.",
+        "typescript_type_error": "type contract fixes can change behavior and require manual review.",
+        "js_type_error": "runtime value-shape fixes can change behavior and require manual review.",
+        "js_reference_error": "undefined symbol fixes can change behavior and require manual review.",
+    }
+    return reasons.get(root, "No allowlisted deterministic JS/TS patch is available.")
 
 
 def _js_location(output: str) -> tuple[str, int]:
@@ -302,6 +506,26 @@ def _js_location(output: str) -> tuple[str, int]:
         return match.group(1), int(match.group(2))
     direct = re.search(r"([^:\s]+\.[cm]?[jt]sx?):(\d+):\d+", output)
     return (direct.group(1), int(direct.group(2))) if direct else ("", 0)
+
+
+def _js_route(output: str) -> str:
+    method_route = re.search(
+        r"\b(?:GET|POST|PUT|PATCH|DELETE|OPTIONS|HEAD)\s+(/\S+?)(?:\s+(?:\d{3}|in\b|failed\b)|\s*$)",
+        output,
+        re.IGNORECASE,
+    )
+    if method_route:
+        return method_route.group(1)
+    api_path = re.search(r"\b(?:app|pages|src[/\\]app|src[/\\]pages)[/\\](api[/\\][^\s:]+)", output)
+    if api_path:
+        route = "/" + api_path.group(1).replace("\\", "/")
+        return re.sub(r"/route\.[cm]?[jt]sx?$", "", route)
+    return ""
+
+
+def _connection_target(output: str) -> str:
+    match = re.search(r"\b(?:https?://)?(?:localhost|127\.0\.0\.1|\[?::1\]?):\d+\b", output, re.IGNORECASE)
+    return match.group(0) if match else ""
 
 
 def _php_location(output: str) -> tuple[str, int]:
@@ -355,6 +579,10 @@ def _framework_context(cwd: str | None, command: str) -> dict[str, Any]:
     command_lower = command.lower()
     if "next" in deps_text or "next" in command_lower or context["has_next_config"] or context["has_app_dir"]:
         context["frameworks"].append("next.js")
+    if "express" in deps_text or "express" in command_lower:
+        context["frameworks"].append("express")
+    if "vite" in deps_text or "vite" in command_lower or any(root.glob("vite.config.*")):
+        context["frameworks"].append("vite")
     if "react" in deps_text or "react" in command_lower:
         context["frameworks"].append("react")
     if context["has_tsconfig"] or "typescript" in deps_text or "tsc" in command_lower:
@@ -369,10 +597,14 @@ def _detect_js_framework(output: str, command: str, context: dict[str, Any], lan
     frameworks = context.get("frameworks") or []
     if "next.js" in frameworks or "next dev" in text or "next build" in text or ".next/" in text or "next/dist" in text:
         return "next.js"
+    if "vite" in frameworks:
+        return "vite/react" if "react" in frameworks or "react" in text else "vite"
     if "react" in frameworks or "hydration" in text or "react-dom" in text:
         return "react"
     if "typescript" in frameworks or language == "typescript":
         return "typescript"
+    if "express" in frameworks or "express" in text:
+        return "express"
     return "node"
 
 
@@ -426,7 +658,7 @@ def _first_trace_line(text: str) -> str:
 
 
 def _framework_name(framework: str) -> str:
-    return {"next.js": "Next.js", "react": "React", "typescript": "TypeScript", "node": "Node.js"}.get(framework, framework or "Node.js")
+    return {"next.js": "Next.js", "react": "React", "typescript": "TypeScript", "express": "Express", "node": "Node.js"}.get(framework, framework or "Node.js")
 
 
 def _module_fix(missing: str, framework: str) -> str:

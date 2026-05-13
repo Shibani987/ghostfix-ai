@@ -19,12 +19,12 @@ from rich.table import Table
 from rich.panel import Panel
 from rich import print as rprint
 
-APP_VERSION = "0.3.0"
+APP_VERSION = "0.6.0"
 
 
 app = typer.Typer(
     name="ghostfix",
-    help="Promptless local-first runtime debugging. Watch logs, explain crashes, and apply only safety-gated Python fixes.",
+    help="Promptless local-first runtime debugging. Watch logs, explain crashes, and apply only safety-gated deterministic fixes.",
     add_completion=False,
     no_args_is_help=True,
     rich_markup_mode="rich",
