@@ -1,0 +1,7 @@
+Server starting on port 5173
+C:\repo\server.js:4
+console.log(missingValue);
+            ^
+ReferenceError: missingValue is not defined
+    at Object.<anonymous> (C:\repo\server.js:4:13)
+    at Module._compile (node:internal/modules/cjs/loader:1358:14)

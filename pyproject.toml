@@ -1,0 +1,94 @@
+[build-system]
+requires = ["setuptools>=61", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "ghostfix-ai"
+version = "0.2.0"
+description = "Production-minded local-first runtime debugging CLI with safety-gated Python auto-fix."
+readme = "README.md"
+license = { text = "MIT" }
+requires-python = ">=3.10"
+authors = [
+  { name = "GhostFix AI" },
+]
+keywords = ["debugging", "cli", "python", "runtime-errors", "developer-tools"]
+classifiers = [
+  "Development Status :: 4 - Beta",
+  "Environment :: Console",
+  "Intended Audience :: Developers",
+  "Programming Language :: Python :: 3",
+  "Programming Language :: Python :: 3.10",
+  "Programming Language :: Python :: 3.11",
+  "Programming Language :: Python :: 3.12",
+  "Topic :: Software Development :: Debuggers",
+  "Topic :: Software Development :: Quality Assurance",
+]
+dependencies = [
+  "typer>=0.12.0",
+  "rich>=13.7.0",
+]
+
+[project.optional-dependencies]
+retriever = [
+  "scikit-learn>=1.3.0",
+  "numpy>=1.24.0",
+]
+cloud-memory = [
+  "supabase>=2.3.0",
+  "python-dotenv>=1.0.0",
+]
+brain-v4 = [
+  "torch>=2.0.0",
+  "transformers>=4.35.0",
+  "peft>=0.7.0",
+  "accelerate>=0.25.0",
+]
+dev = [
+  "build>=1.2.0",
+  "pytest>=7.4.0",
+  "ruff>=0.1.0",
+  "twine>=5.0.0",
+]
+
+[project.urls]
+Homepage = "https://github.com/ghostfix-ai/ghostfix-ai"
+Documentation = "https://github.com/ghostfix-ai/ghostfix-ai#readme"
+Security = "https://github.com/ghostfix-ai/ghostfix-ai/blob/main/SECURITY.md"
+
+[project.scripts]
+ghostfix = "cli.main:app"
+
+[tool.setuptools.packages.find]
+include = ["agent*", "cli*", "core*", "ghostfix*", "ml*", "utils*"]
+exclude = ["tests*", "demos*", "docs*"]
+
+[tool.setuptools.package-data]
+ml = [
+  "configs/*.yaml",
+]
+
+[tool.setuptools.exclude-package-data]
+"*" = [
+  "__pycache__/*",
+  "*.pyc",
+  ".ghostfix/*",
+  ".ml/*",
+  "reports/*",
+  "*.bak_*",
+  "*.zip",
+  "*.db",
+  "*.sqlite",
+  "*.sqlite3",
+  "*.bin",
+  "*.ckpt",
+  "*.pt",
+  "*.pth",
+  "*.safetensors",
+  "*.pkl",
+  "processed/*",
+  "models/base_model/*",
+  "models/base_model*/*",
+  "models/*",
+  "models/**/checkpoint-*/*",
+]

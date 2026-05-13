@@ -1,0 +1,74 @@
+{
+  "async_lifecycle_context.py": {
+    "expected_error_type": "AsyncLifecycleError",
+    "expected_root_cause": "Async session lifecycle closed before profile fetch.",
+    "safe_to_autofix": false,
+    "expected_manual_review_required": true
+  },
+  "api_response_shape_mismatch.py": {
+    "expected_error_type": "APIResponseShapeError",
+    "expected_root_cause": "Partner API response shape uses data.items instead of expected data.orders.",
+    "safe_to_autofix": false,
+    "expected_manual_review_required": true
+  },
+  "dataclass_init_mismatch.py": {
+    "expected_error_type": "DataclassInitMismatchError",
+    "expected_root_cause": "Input row passes currency to Invoice dataclass constructor even though the dataclass does not define that field.",
+    "safe_to_autofix": false,
+    "expected_manual_review_required": true
+  },
+  "decorator_misuse.py": {
+    "expected_error_type": "DecoratorBindingError",
+    "expected_root_cause": "Decorator expected a request containing user before invoking the dashboard handler.",
+    "safe_to_autofix": false,
+    "expected_manual_review_required": true
+  },
+  "dynamic_attribute_lookup.py": {
+    "expected_error_type": "DynamicAttributeResolutionError",
+    "expected_root_cause": "Dynamic settings lookup requests PAYMENT_PROVIDER_KEY but Settings does not define that attribute.",
+    "safe_to_autofix": false,
+    "expected_manual_review_required": true
+  },
+  "env_config_interaction.py": {
+    "expected_error_type": "ConfigInteractionError",
+    "expected_root_cause": "Environment defaults combine sqlite with DB_SSL_MODE=require, an invalid configuration interaction.",
+    "safe_to_autofix": false,
+    "expected_manual_review_required": true
+  },
+  "framework_signal_order.py": {
+    "expected_error_type": "FrameworkSignalOrderError",
+    "expected_root_cause": "Framework startup signal runs before the application registry is marked ready.",
+    "safe_to_autofix": false,
+    "expected_manual_review_required": true
+  },
+  "multi_step_traceback_payment.py": {
+    "expected_error_type": "PaymentWorkflowError",
+    "expected_root_cause": "Checkout amount_cents contains a decimal string and must be numeric cents before charge creation.",
+    "safe_to_autofix": false,
+    "expected_manual_review_required": true
+  },
+  "nested_exception_cache.py": {
+    "expected_error_type": "CacheHydrationError",
+    "expected_root_cause": "Cache hydration returns profile None before email access.",
+    "safe_to_autofix": false,
+    "expected_manual_review_required": true
+  },
+  "orm_query_issue.py": {
+    "expected_error_type": "ORMQueryConstructionError",
+    "expected_root_cause": "ORM query uses unknown filter field profile__company_id.",
+    "safe_to_autofix": false,
+    "expected_manual_review_required": true
+  },
+  "serialization_edge_case.py": {
+    "expected_error_type": "SerializationEdgeCaseError",
+    "expected_root_cause": "JSON serialization fails because payload contains Decimal.",
+    "safe_to_autofix": false,
+    "expected_manual_review_required": true
+  },
+  "service_none_propagation.py": {
+    "expected_error_type": "NonePropagationChainError",
+    "expected_root_cause": "Customer lookup returns None and propagates into email context builder.",
+    "safe_to_autofix": false,
+    "expected_manual_review_required": true
+  }
+}

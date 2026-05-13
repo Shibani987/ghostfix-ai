@@ -1,0 +1,51 @@
+{
+  "python_traceback.log": {
+    "expected_language": "python",
+    "expected_runtime": "python",
+    "expected_error_type": "NameError",
+    "expected_root_cause_keyword": "defined",
+    "expected_auto_fix_allowed": false
+  },
+  "django_runserver.log": {
+    "expected_language": "python",
+    "expected_runtime": "django",
+    "expected_error_type": "ImproperlyConfigured",
+    "expected_root_cause_keyword": "settings",
+    "expected_auto_fix_allowed": false
+  },
+  "fastapi_uvicorn.log": {
+    "expected_language": "python",
+    "expected_runtime": "fastapi",
+    "expected_error_type": "ModuleNotFoundError",
+    "expected_root_cause_keyword": "uvicorn",
+    "expected_auto_fix_allowed": false
+  },
+  "node_stack.log": {
+    "expected_language": "javascript/node",
+    "expected_runtime": "node",
+    "expected_error_type": "ReferenceError",
+    "expected_root_cause_keyword": "defined",
+    "expected_auto_fix_allowed": false
+  },
+  "npm_error.log": {
+    "expected_language": "javascript/node",
+    "expected_runtime": "npm",
+    "expected_error_type": "npm_error",
+    "expected_root_cause_keyword": "script",
+    "expected_auto_fix_allowed": false
+  },
+  "env_var.log": {
+    "expected_language": "unknown",
+    "expected_runtime": "env",
+    "expected_error_type": "MissingEnvironmentVariable",
+    "expected_root_cause_keyword": "environment",
+    "expected_auto_fix_allowed": false
+  },
+  "port_conflict.log": {
+    "expected_language": "javascript/node",
+    "expected_runtime": "port",
+    "expected_error_type": "PortInUse",
+    "expected_root_cause_keyword": "port",
+    "expected_auto_fix_allowed": false
+  }
+}

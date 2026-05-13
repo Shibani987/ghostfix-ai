@@ -1,0 +1,52 @@
+{
+  "version": "ghostfix_brain_v1",
+  "error_types": [
+    "AttributeError",
+    "FileNotFoundError",
+    "IndexError",
+    "JSONDecodeError",
+    "KeyError",
+    "ModuleNotFoundError",
+    "NameError",
+    "SyntaxError",
+    "TypeError",
+    "ValueError"
+  ],
+  "fix_templates": {
+    "install_missing_module": "Install the missing package in the active environment or correct the import path.",
+    "define_or_correct_name": "Define the missing variable/function before use or correct the spelling.",
+    "verify_file_path": "Verify the file path or create/provide the missing file.",
+    "check_key_or_get": "Check that the key exists before access or use dict.get().",
+    "validate_index_bounds": "Validate sequence length and index bounds before access.",
+    "ensure_valid_json": "Ensure the input contains valid non-empty JSON before parsing.",
+    "correct_syntax": "Correct the syntax near the failing line.",
+    "check_attribute_or_type": "Check the object type and attribute name before access.",
+    "check_type_or_signature": "Check expected types/signature and convert or call correctly.",
+    "validate_value": "Validate the input value before conversion or operation.",
+    "general_python_fix": "Inspect traceback and context, then apply the specific Python fix."
+  },
+  "fix_template_counts": {
+    "define_or_correct_name": 101,
+    "check_type_or_signature": 132,
+    "install_missing_module": 110,
+    "verify_file_path": 116,
+    "validate_value": 32,
+    "validate_index_bounds": 108,
+    "check_key_or_get": 118,
+    "ensure_valid_json": 58,
+    "correct_syntax": 32,
+    "check_attribute_or_type": 31
+  },
+  "error_type_counts": {
+    "NameError": 101,
+    "TypeError": 132,
+    "ModuleNotFoundError": 110,
+    "FileNotFoundError": 116,
+    "ValueError": 32,
+    "IndexError": 108,
+    "KeyError": 118,
+    "JSONDecodeError": 58,
+    "SyntaxError": 32,
+    "AttributeError": 31
+  }
+}

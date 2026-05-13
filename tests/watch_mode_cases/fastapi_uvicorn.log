@@ -1,0 +1,6 @@
+INFO:     Will watch for changes in these directories: ['.']
+INFO:     Uvicorn running on http://127.0.0.1:8000
+Traceback (most recent call last):
+  File "main.py", line 2, in <module>
+    from missing_api_client import Client
+ModuleNotFoundError: No module named 'missing_api_client'

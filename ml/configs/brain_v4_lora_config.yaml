@@ -1,0 +1,34 @@
+base_model_path: ml/models/base_model
+output_dir: ml/models/ghostfix_brain_v4_lora
+
+data:
+  train_file: ml/processed/brain_v4_lora_train.jsonl
+  val_file: ml/processed/brain_v4_lora_val.jsonl
+  instruction_field: instruction
+  input_field: input
+  output_field: output
+
+training:
+  max_seq_length: 384
+  learning_rate: 0.0002
+  epochs: 2
+  batch_size: 1
+  gradient_accumulation: 8
+
+lora:
+  lora_r: 8
+  lora_alpha: 16
+  lora_dropout: 0.05
+  target_modules:
+    - q_proj
+    - k_proj
+    - v_proj
+    - o_proj
+    - gate_proj
+    - up_proj
+    - down_proj
+
+safety:
+  train_from_scratch: false
+  external_api_required: false
+  auto_fix_enabled_by_model: false

@@ -1,0 +1,62 @@
+{
+  "django_settings_import_error.py": {
+    "expected_error_type": "ModuleNotFoundError",
+    "expected_root_cause": "Django settings module points to a module that cannot be imported in the active project/environment.",
+    "safe_to_autofix": false,
+    "expected_manual_review_required": true
+  },
+  "fastapi_missing_dependency.py": {
+    "expected_error_type": "ModuleNotFoundError",
+    "expected_root_cause": "FastAPI endpoint code imports an optional request parsing dependency that is not installed.",
+    "safe_to_autofix": false,
+    "expected_manual_review_required": true
+  },
+  "pandas_missing_column.py": {
+    "expected_error_type": "KeyError",
+    "expected_root_cause": "The pandas DataFrame does not contain the requested customer_email column.",
+    "safe_to_autofix": false,
+    "expected_manual_review_required": true
+  },
+  "json_empty_invalid_response.py": {
+    "expected_error_type": "JSONDecodeError",
+    "expected_root_cause": "Code attempts to parse an empty HTTP response body as JSON.",
+    "safe_to_autofix": true,
+    "expected_manual_review_required": true
+  },
+  "file_path_missing.py": {
+    "expected_error_type": "FileNotFoundError",
+    "expected_root_cause": "The configured export file path does not exist at runtime.",
+    "safe_to_autofix": false,
+    "expected_manual_review_required": true
+  },
+  "environment_variable_missing.py": {
+    "expected_error_type": "KeyError",
+    "expected_root_cause": "Required DATABASE_URL environment variable is missing from the process environment.",
+    "safe_to_autofix": false,
+    "expected_manual_review_required": true
+  },
+  "attribute_error_none.py": {
+    "expected_error_type": "AttributeError",
+    "expected_root_cause": "A user lookup returned None, but the code dereferences it as a user object.",
+    "safe_to_autofix": false,
+    "expected_manual_review_required": true
+  },
+  "type_error_wrong_argument.py": {
+    "expected_error_type": "TypeError",
+    "expected_root_cause": "Function is called with a positional argument for a keyword-only parameter.",
+    "safe_to_autofix": false,
+    "expected_manual_review_required": true
+  },
+  "index_error_empty_list.py": {
+    "expected_error_type": "IndexError",
+    "expected_root_cause": "Code indexes the first API result without checking whether the result list is empty.",
+    "safe_to_autofix": true,
+    "expected_manual_review_required": true
+  },
+  "permission_error_file_write.py": {
+    "expected_error_type": "PermissionError",
+    "expected_root_cause": "Code attempts to open a directory path as a writable report file target.",
+    "safe_to_autofix": false,
+    "expected_manual_review_required": true
+  }
+}

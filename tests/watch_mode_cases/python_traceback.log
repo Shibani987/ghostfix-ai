@@ -1,0 +1,5 @@
+INFO: starting local script
+Traceback (most recent call last):
+  File "app.py", line 3, in <module>
+    print(missing_name)
+NameError: name 'missing_name' is not defined

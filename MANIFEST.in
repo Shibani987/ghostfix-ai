@@ -1,0 +1,34 @@
+include README.md
+include LICENSE
+include pyproject.toml
+
+prune .ghostfix
+prune .ml
+prune .github
+prune .pytest_cache
+prune .mypy_cache
+prune .ruff_cache
+prune archive_outside_git
+prune build
+prune dist
+prune demos
+prune docs
+prune ghostfix_clean_test
+prune ml/reports
+prune tests
+
+global-exclude __pycache__/*
+global-exclude *.py[cod]
+global-exclude *.bak_*
+global-exclude *.zip
+global-exclude *.db
+global-exclude *.sqlite
+global-exclude *.sqlite3
+global-exclude *.bin
+global-exclude *.ckpt
+global-exclude *.pt
+global-exclude *.pth
+global-exclude *.safetensors
+global-exclude *.pkl
+prune ml/models
+prune ml/processed

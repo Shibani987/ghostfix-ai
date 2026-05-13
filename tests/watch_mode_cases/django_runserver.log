@@ -1,0 +1,8 @@
+Watching for file changes with StatReloader
+Performing system checks...
+Traceback (most recent call last):
+  File "manage.py", line 22, in <module>
+    main()
+  File "project/settings.py", line 10, in <module>
+    raise ImproperlyConfigured("SECRET_KEY is required")
+django.core.exceptions.ImproperlyConfigured: SECRET_KEY is required

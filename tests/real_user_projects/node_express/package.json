@@ -1,0 +1,10 @@
+{
+  "name": "ghostfix-node-express-fixture",
+  "private": true,
+  "scripts": {
+    "dev": "node server.js",
+    "missing-module": "node server.js missing-module",
+    "bad-env": "node server.js bad-env",
+    "startup-crash": "node server.js startup-crash"
+  }
+}

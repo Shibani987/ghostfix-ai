@@ -1,0 +1,6 @@
+> demo@1.0.0 dev
+> vite --host 0.0.0.0
+
+npm ERR! Missing script: "dev"
+npm ERR! To see a list of scripts, run:
+npm ERR!   npm run
