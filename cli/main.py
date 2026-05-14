@@ -19,7 +19,7 @@ from rich.table import Table
 from rich.panel import Panel
 from rich import print as rprint
 
-APP_VERSION = "0.6.0"
+APP_VERSION = "0.7.0"
 
 
 app = typer.Typer(

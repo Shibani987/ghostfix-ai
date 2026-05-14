@@ -53,6 +53,11 @@ def build_js_patch_plan(diagnostic: dict, cwd: str | None = None) -> JsPatchPlan
         if plan.available:
             return plan
 
+    if diagnostic.get("root_cause") in {"missing_named_export", "missing_default_export"}:
+        plan = _export_mismatch_plan(file_path, lines, diagnostic, cwd)
+        if plan.available:
+            return plan
+
     return JsPatchPlan(False, "No allowlisted deterministic JS/TS patch matched this error.")
 
 
@@ -116,6 +121,46 @@ def _relative_import_extension_plan(path: Path, lines: list[str], diagnostic: di
     return JsPatchPlan(False, "Could not find the exact import line to patch.")
 
 
+def _export_mismatch_plan(path: Path, lines: list[str], diagnostic: dict, cwd: str | None) -> JsPatchPlan:
+    symbol = _missing_export_name(diagnostic)
+    if not symbol:
+        return JsPatchPlan(False, "Missing export repair requires an exact symbol name.")
+    for index, line in enumerate(lines, start=1):
+        if symbol not in line or " from " not in line:
+            continue
+        module = _module_from_import_line(line)
+        if not module or not module.startswith("."):
+            continue
+        target = _resolve_js_module(path.parent, module)
+        if not target:
+            continue
+        try:
+            target_text = target.read_text(encoding="utf-8", errors="replace")
+        except OSError:
+            continue
+        if "export default" in target_text and re.search(rf"import\s*\{{\s*{re.escape(symbol)}\s*\}}\s*from", line):
+            replacement = re.sub(rf"import\s*\{{\s*{re.escape(symbol)}\s*\}}\s*from", f"import {symbol} from", line, count=1)
+            return _single_line_plan(
+                path,
+                lines,
+                index,
+                replacement,
+                f"Safe export mismatch patch: `{target.name}` has a default export and the import used a named export.",
+            )
+        exported = _named_exports(target_text)
+        exact_case = [name for name in exported if name.lower() == symbol.lower() and name != symbol]
+        if len(exact_case) == 1:
+            replacement = line.replace(symbol, exact_case[0], 1)
+            return _single_line_plan(
+                path,
+                lines,
+                index,
+                replacement,
+                f"Safe export mismatch patch: exact local export `{exact_case[0]}` differs only by spelling/case.",
+            )
+    return JsPatchPlan(False, "Export mismatch repair requires exactly one local target module with a compatible export.")
+
+
 def _single_line_plan(path: Path, lines: list[str], line_no: int, replacement: str, reason: str) -> JsPatchPlan:
     old_lines = lines[:]
     new_lines = lines[:]
@@ -155,6 +200,35 @@ def _missing_module_name(diagnostic: dict) -> str:
         if match:
             return match.group(1)
     return ""
+
+
+def _missing_export_name(diagnostic: dict) -> str:
+    message = str(diagnostic.get("message") or "")
+    match = re.search(r"(?:export named|Attempted import error:)\s+['\"]?([A-Za-z_$][\w$]*)['\"]?", message)
+    if match:
+        return match.group(1)
+    match = re.search(r"['\"]([A-Za-z_$][\w$]*)['\"]\s+is not exported", message)
+    return match.group(1) if match else ""
+
+
+def _module_from_import_line(line: str) -> str:
+    match = re.search(r"from\s+['\"]([^'\"]+)['\"]", line)
+    return match.group(1) if match else ""
+
+
+def _resolve_js_module(base: Path, module: str) -> Path | None:
+    direct = base / module
+    candidates = [direct.with_suffix(suffix) for suffix in JS_TS_SUFFIXES]
+    candidates += [direct / f"index{suffix}" for suffix in JS_TS_SUFFIXES]
+    exact = [candidate.resolve() for candidate in candidates if candidate.exists() and candidate.is_file()]
+    return exact[0] if len(exact) == 1 else None
+
+
+def _named_exports(text: str) -> list[str]:
+    exports = re.findall(r"export\s+(?:function|class|const|let|var)\s+([A-Za-z_$][\w$]*)", text)
+    for group in re.findall(r"export\s*\{([^}]+)\}", text):
+        exports.extend(part.strip().split(" as ")[-1] for part in group.split(","))
+    return sorted({item for item in exports if item})
 
 
 def _is_sensitive_path(path: Path) -> bool:

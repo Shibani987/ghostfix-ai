@@ -7,6 +7,7 @@ from typing import Any
 
 from core.js_autofix import build_js_patch_plan, patch_block_from_plan
 from core.php_autofix import build_php_patch_plan, patch_block_from_plan as php_patch_block_from_plan
+from core.repo_engine import build_repo_snapshot, classify_failure, compute_confidence, is_sensitive_target, structured_plan_from_patch_block
 from core.runtime_detector import infer_runtime_profile
 
 
@@ -42,8 +43,10 @@ def _diagnose_javascript(output: str, command: str, cwd: str | None, language: s
     confidence = 55
     profile = infer_runtime_profile(command=command, cwd=cwd, output=output)
     context = _framework_context(cwd, command)
+    repo_snapshot = build_repo_snapshot(cwd)
     framework = profile.framework if profile.language in {"javascript/node", "typescript"} and profile.framework != "unknown" else _detect_js_framework(output, command, context, language)
     evidence = _context_evidence(output, command, context)
+    evidence.append(f"repo context: {repo_snapshot.summary()}")
     if profile.dev_server_type != "unknown":
         evidence.append(f"runtime profile: {profile.dev_server_type}")
     route = _js_route(output)
@@ -89,6 +92,7 @@ def _diagnose_javascript(output: str, command: str, cwd: str | None, language: s
         output,
         re.IGNORECASE,
     )
+    missing_default_export_match = re.search(r"does not contain a default export|has no default export|No matching export .* for import \"default\"", output, re.IGNORECASE)
     missing_middleware_match = re.search(r"(?:body-parser|express\.json|req\.body).{0,120}(?:undefined|missing|not parsed)", output, re.IGNORECASE | re.DOTALL)
     syntax_build_match = re.search(
         r"(?:Failed to compile|SyntaxError:|Parsing ecmascript source code failed|Unexpected token|Unexpected end of input|Expected .+? got .+)",
@@ -175,6 +179,13 @@ def _diagnose_javascript(output: str, command: str, cwd: str | None, language: s
         likely = f"The import references `{symbol}`, but the target module does not expose that named export."
         fix = "Check the source module exports and the import statement. If this is a typo, rename the import/export to the exact existing symbol."
         confidence = 84
+    elif missing_default_export_match:
+        error_type = "MissingExportError"
+        message = _matching_line(output, missing_default_export_match) or "Missing default export."
+        root_cause = "missing_default_export"
+        likely = "The import expects a default export, but the target module only exposes named exports."
+        fix = "Use the exact named export from the target module or add a default export only if that matches the component/module intent."
+        confidence = 82
     elif hydration_match:
         error_type = "ReactHydrationError"
         message = _matching_line(output, hydration_match) or "Hydration failed."
@@ -282,6 +293,7 @@ def _diagnose_javascript(output: str, command: str, cwd: str | None, language: s
         dev_server_type=profile.dev_server_type,
     )
     _attach_js_patch_metadata(diagnostic, cwd)
+    _attach_repo_plan_metadata(diagnostic, repo_snapshot, command)
     return diagnostic
 
 
@@ -293,6 +305,7 @@ def _diagnose_php(output: str, command: str, cwd: str | None) -> dict[str, Any]:
     fix = "Review the reported PHP file and fix the failing statement."
     confidence = 55
     profile = infer_runtime_profile(command=command, cwd=cwd, output=output)
+    repo_snapshot = build_repo_snapshot(cwd)
 
     kind_match = re.search(r"PHP (Fatal error|Parse error|Warning|Notice):\s*(.+?)(?: in | on line |\n|$)", output, re.DOTALL)
     artisan_env_match = re.search(r"(?:No application encryption key has been specified|APP_KEY|\.env)", output, re.IGNORECASE)
@@ -367,7 +380,48 @@ def _diagnose_php(output: str, command: str, cwd: str | None) -> dict[str, Any]:
         dev_server_type=profile.dev_server_type,
     )
     _attach_php_patch_metadata(diagnostic, cwd)
+    _attach_repo_plan_metadata(diagnostic, repo_snapshot, command)
     return diagnostic
+
+
+def _attach_repo_plan_metadata(diagnostic: dict[str, Any], repo_snapshot, command: str) -> None:
+    patch_block = diagnostic.get("patch_block") or {}
+    file_path = patch_block.get("file_path") or diagnostic.get("file") or ""
+    classification = classify_failure(
+        root_cause=diagnostic.get("root_cause", ""),
+        error_type=diagnostic.get("error_type", ""),
+        patch_available=bool(patch_block.get("available")),
+        validation_available=bool(patch_block.get("validation")),
+        sensitive_target=bool(file_path and is_sensitive_target(file_path)),
+        exact_match=bool(patch_block.get("available")),
+        external_dependency=diagnostic.get("root_cause") in {
+            "ollama_connection_failed",
+            "localhost_connection_refused",
+            "backend_connection_refused",
+            "next_missing_env_var",
+            "js_missing_env_var",
+            "laravel_env_or_app_key_missing",
+            "port_already_in_use",
+        },
+    )
+    confidence = compute_confidence(
+        validation_success=bool(patch_block.get("available")),
+        exact_symbol_or_file_match=bool(patch_block.get("available") or diagnostic.get("file")),
+        framework_confidence=int(diagnostic.get("confidence") or 0),
+        parser_confidence=int(diagnostic.get("confidence") or 0),
+        stacktrace_quality=90 if diagnostic.get("file") else 50,
+    )
+    if patch_block.get("available"):
+        diagnostic["confidence"] = max(int(diagnostic.get("confidence") or 0), confidence)
+    diagnostic["failure_classification"] = classification
+    diagnostic["repo_context"] = repo_snapshot.summary()
+    diagnostic["structured_patch_plan"] = structured_plan_from_patch_block(
+        patch_block,
+        classification=classification,
+        explanation=diagnostic.get("likely_root_cause") or diagnostic.get("root_cause") or "",
+        confidence=diagnostic.get("confidence") or confidence,
+        command=command,
+    ).to_dict()
 
 
 def _schema(

@@ -89,6 +89,25 @@ def show_output(data):
     if not verbose and evidence:
         content += f"\nEVIDENCE:\n{evidence}\n"
 
+    structured_plan = data.get("structured_patch_plan") or {}
+    if structured_plan:
+        content += f"""
+FAILURE_CLASSIFICATION:
+{structured_plan.get("classification", "")}
+
+EXACT_FILE:
+{", ".join(structured_plan.get("file_targets") or [])}
+
+VALIDATION_RESULT:
+{", ".join(structured_plan.get("validation_strategy") or [])}
+
+APPLY_FIX? y/n
+{structured_plan.get("apply_prompt", "APPLY_FIX? y/n")}
+
+ROLLBACK_AVAILABLE:
+{"yes" if (structured_plan.get("rollback_metadata") or {}).get("backup_required") else "no"}
+"""
+
     if verbose and snippet:
         content += f"\nCODE_CONTEXT:\n{snippet}\n"
 

@@ -7,7 +7,7 @@ from core.confidence import normalize_confidence
 
 
 SAFE_COMPLEXITY = "deterministic_safe"
-SAFE_ERROR_TYPES = {"SyntaxError", "IndentationError", "JSONDecodeError"}
+SAFE_ERROR_TYPES = {"SyntaxError", "IndentationError", "JSONDecodeError", "NameError"}
 NEVER_AUTO_FIX_COMPLEXITIES = {"needs_project_context", "unsafe_to_autofix"}
 NEVER_AUTO_FIX_ERROR_TYPES = {"FileNotFoundError", "PermissionError", "RuntimeError"}
 MIN_AUTO_FIX_CONFIDENCE = 0.95

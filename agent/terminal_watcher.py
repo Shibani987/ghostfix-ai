@@ -4,6 +4,7 @@ import subprocess
 import sys
 import hashlib
 import re
+import difflib
 from collections import deque
 from dataclasses import dataclass
 from pathlib import Path
@@ -24,6 +25,7 @@ from core.language_diagnostics import detect_language, diagnose_non_python
 from core.log_events import LogEventKind, LogEventPipeline, LogSourceType
 from core.patch_validator import PatchValidator
 from core.parser import extract_runtime_error
+from core.repo_engine import classify_failure, compute_confidence, is_sensitive_target, record_v07_metric, structured_plan_from_patch_block
 from core.root_cause_analyzer import RootCauseAnalyzer
 from core.runtime_detector import infer_runtime_profile
 from core.tooling_diagnostics import diagnose_tooling
@@ -318,6 +320,26 @@ class TerminalWatcher:
             decision.confidence = max(decision.confidence, evidence.confidence / 100.0)
         safe_block = self._safe_patch_block(evidence, parsed, decision.to_dict())
         validation = self.validator.validate(safe_block)
+        classification = classify_failure(
+            root_cause=evidence.root_cause,
+            error_type=evidence.error_type,
+            patch_available=bool(safe_block and safe_block.get("available")),
+            validation_available=validation.ok,
+            sensitive_target=bool(evidence.file_path and is_sensitive_target(evidence.file_path)),
+            exact_match=bool((safe_block or {}).get("available") and (evidence.exact_symbol_matches or evidence.source in {"parser", "framework_rule"})),
+            multi_file=False,
+        )
+        repo_confidence = compute_confidence(
+            validation_success=validation.ok,
+            exact_symbol_or_file_match=bool(evidence.exact_symbol_matches or evidence.file_path),
+            framework_confidence=evidence.confidence,
+            parser_confidence=confidence_percent(decision.confidence),
+            stacktrace_quality=90 if evidence.frames else 45,
+        )
+        if validation.ok and evidence.error_type == "NameError" and evidence.exact_symbol_matches:
+            repo_confidence = max(repo_confidence, 96)
+        decision.confidence = max(decision.confidence, repo_confidence / 100.0)
+        decision.complexity_class = classification
         decision = apply_safety_policy(
             decision,
             patch_available=bool(safe_block and safe_block.get("available")),
@@ -352,6 +374,13 @@ class TerminalWatcher:
                 "error": traceback,
                 "context": evidence.code_context,
                 "patch": safe_block.get("patch") if safe_block else "",
+                "structured_patch_plan": structured_plan_from_patch_block(
+                    safe_block,
+                    classification=classification,
+                    explanation=decision.cause or evidence.likely_root_cause or evidence.root_cause,
+                    confidence=confidence_percent(decision.confidence),
+                    command=self.command,
+                ).to_dict(),
                 "verbose": False,
             })
         else:
@@ -359,6 +388,7 @@ class TerminalWatcher:
 
         if not self.auto_fix:
             record_incident(incident, root=Path(self.cwd))
+            record_v07_metric(Path(self.cwd), "unsafe_block_rate" if classification == "unsafe_blocked" else "unresolved_rate")
             return
 
         if not auto_fix_available:
@@ -372,6 +402,7 @@ class TerminalWatcher:
                     root=Path(self.cwd),
                 )
             record_incident(incident, root=Path(self.cwd))
+            record_v07_metric(Path(self.cwd), "unsafe_block_rate" if classification == "unsafe_blocked" else "unresolved_rate")
             return
 
         if self.dry_run:
@@ -443,8 +474,13 @@ class TerminalWatcher:
             console.print(rerun.stderr, style="red")
         if rerun.success:
             console.print("Verification: original command now exits successfully.", style="bold green")
+            record_v07_metric(Path(self.cwd), "fix_success_rate")
+            record_v07_metric(Path(self.cwd), "rerun_success_rate")
+            if classification == "deterministic_safe":
+                record_v07_metric(Path(self.cwd), "deterministic_solve_rate")
         else:
             console.print(f"Verification failed: command exited with {rerun.returncode}.", style="bold red")
+            record_v07_metric(Path(self.cwd), "unresolved_rate")
         incident.resolved_after_fix = rerun.success
         incident.rollback_metadata = result.get("rollback_metadata") or {}
         record_incident(incident, root=Path(self.cwd))
@@ -486,6 +522,7 @@ class TerminalWatcher:
             console.print(f"AUTO_FIX_BLOCK_REASON:\n{decision.safety_policy_reason}\n")
         console.print(f"SAFETY_REASON:\n{decision.safety_policy_reason}\n")
         console.print(f"PATCH_PLAN:\n{patch_plan}\n")
+        console.print(f"FAILURE_CLASSIFICATION:\n{decision.complexity_class or ''}\n")
         if safe_block and safe_block.get("patch"):
             console.print(safe_block["patch"])
         if not validation.ok:
@@ -501,6 +538,7 @@ class TerminalWatcher:
         print(f"FRAMEWORK: {diagnostic.get('framework', 'unknown')}")
         print(f"RUNTIME: {diagnostic.get('runtime') or self.runtime_profile.runtime}")
         print(f"FAILING_FILE: {diagnostic.get('file', '')}")
+        print(f"EXACT_FILE: {diagnostic.get('file', '')}")
         print(f"FAILING_LINE: {diagnostic.get('line') or ''}")
         print(f"ROOT_CAUSE: {diagnostic.get('likely_root_cause') or diagnostic.get('root_cause', '')}")
         evidence = diagnostic.get("evidence") or []
@@ -515,6 +553,8 @@ class TerminalWatcher:
         print(f"NEXT_STEP: {next_step}")
         print(f"Next step: {next_step}")
         print(f"AUTO_FIX: {'yes' if auto_fix else 'no'}")
+        print(f"CONFIDENCE: {diagnostic.get('confidence', 0)}%")
+        print(f"FAILURE_CLASSIFICATION: {diagnostic.get('failure_classification') or 'suggestion_only'}")
         print(f"AUTO_FIX_AVAILABLE={'yes' if auto_fix else 'no'}")
         block_reason = diagnostic.get("why_auto_fix_blocked") or diagnostic.get("safety_reason") or ""
         if not auto_fix:
@@ -527,6 +567,10 @@ class TerminalWatcher:
         if patch_preview:
             print("PATCH_PREVIEW:")
             print(patch_preview)
+        plan = diagnostic.get("structured_patch_plan") or {}
+        if plan:
+            print(f"VALIDATION_RESULT: {'pending real apply' if auto_fix else diagnostic.get('why_auto_fix_blocked', '')}")
+            print("APPLY_FIX? y/n")
         rollback_metadata = {}
         if auto_fix:
             rollback_metadata = self._maybe_apply_language_patch(diagnostic, patch_block, patch_preview)
@@ -723,6 +767,9 @@ SAFETY_REASON:
             return None
         plan = build_patch_plan(evidence.file_path, parsed, decision)
         if not plan.available:
+            repo_plan = self._missing_python_import_patch(evidence)
+            if repo_plan:
+                return repo_plan
             return {"available": False, "reason": plan.reason}
         return {
             "available": True,
@@ -733,6 +780,70 @@ SAFETY_REASON:
             "replacement": plan.replacement,
             "patch": plan.preview,
         }
+
+    def _missing_python_import_patch(self, evidence) -> dict | None:
+        if evidence.error_type != "NameError" or not evidence.missing_name or len(evidence.exact_symbol_matches) != 1:
+            return None
+        target_rel = evidence.exact_symbol_matches[0]
+        target_path = Path(evidence.project_context.root) / target_rel if evidence.project_context else Path(target_rel)
+        file_path = Path(evidence.file_path)
+        if is_sensitive_target(file_path):
+            return None
+        try:
+            lines = file_path.read_text(encoding="utf-8").splitlines(keepends=True)
+        except OSError:
+            return None
+        module = self._python_module_from_path(target_path, Path(evidence.project_context.root) if evidence.project_context else Path(self.cwd))
+        if not module:
+            return None
+        import_line = f"from {module} import {evidence.missing_name}\n"
+        if any(line.strip() == import_line.strip() for line in lines):
+            return None
+        insert_at = self._python_import_insert_line(lines)
+        new_lines = lines[:]
+        new_lines[insert_at:insert_at] = [import_line]
+        return {
+            "available": True,
+            "reason": f"Safe missing-import patch: exact local symbol `{evidence.missing_name}` found in `{target_rel}`.",
+            "file_path": str(file_path),
+            "start_line": insert_at + 1,
+            "end_line": insert_at + 1,
+            "replacement": import_line + (lines[insert_at] if insert_at < len(lines) else ""),
+            "patch": "".join(difflib.unified_diff(
+                [line if line.endswith("\n") else f"{line}\n" for line in lines],
+                [line if line.endswith("\n") else f"{line}\n" for line in new_lines],
+                fromfile=str(file_path),
+                tofile=str(file_path),
+                lineterm="\n",
+            )),
+            "validation": "ast.parse + compile + sandbox validation",
+        }
+
+    def _python_import_insert_line(self, lines: list[str]) -> int:
+        index = 0
+        if lines and lines[0].startswith("#!"):
+            index = 1
+        while index < len(lines) and (lines[index].strip().startswith("#") or not lines[index].strip()):
+            index += 1
+        if index < len(lines) and re.match(r"^[rubfRUBF]*['\"]{3}", lines[index].lstrip()):
+            quote = lines[index].lstrip()[:3]
+            index += 1
+            while index < len(lines) and quote not in lines[index]:
+                index += 1
+            index += 1
+        while index < len(lines) and (lines[index].startswith("import ") or lines[index].startswith("from ")):
+            index += 1
+        return index
+
+    def _python_module_from_path(self, path: Path, root: Path) -> str:
+        try:
+            rel = path.resolve().relative_to(root.resolve())
+        except ValueError:
+            return ""
+        parts = list(rel.with_suffix("").parts)
+        if parts and parts[-1] == "__init__":
+            parts = parts[:-1]
+        return ".".join(parts)
 
     def _format_evidence(self, evidence: List[str]) -> str:
         if not evidence:

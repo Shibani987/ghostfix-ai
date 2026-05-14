@@ -9,6 +9,7 @@ from typing import Any, Dict, List, Optional
 from core.context import extract_context
 from core.parser import parse_error
 from core.project_context import ProjectContext, scan_project_context
+from core.repo_engine import build_repo_snapshot, find_exact_local_symbol, select_business_frame
 
 
 @dataclass
@@ -35,6 +36,8 @@ class DebugEvidence:
     root_cause: str = "Low confidence: needs manual review."
     likely_root_cause: str = ""
     model_prompt: str = ""
+    repo_summary: str = ""
+    exact_symbol_matches: List[str] = field(default_factory=list)
 
     def to_dict(self) -> Dict[str, Any]:
         return {
@@ -60,6 +63,8 @@ class DebugEvidence:
             "root_cause": self.root_cause,
             "likely_root_cause": self.likely_root_cause,
             "model_prompt": self.model_prompt,
+            "repo_summary": self.repo_summary,
+            "exact_symbol_matches": self.exact_symbol_matches,
         }
 
 
@@ -68,7 +73,8 @@ class RootCauseAnalyzer:
 
     def analyze(self, traceback_text: str, cwd: Optional[str] = None, command: str = "") -> DebugEvidence:
         parsed = parse_error(traceback_text) or {}
-        frame = self._select_project_frame(parsed.get("frames") or [], cwd)
+        repo_snapshot = build_repo_snapshot(cwd)
+        frame = select_business_frame(parsed.get("frames") or [], repo_snapshot.root) or self._select_project_frame(parsed.get("frames") or [], cwd)
         file_path = self._resolve_path((frame or {}).get("file") or parsed.get("file"), cwd)
         line_number = (frame or {}).get("line") or parsed.get("line")
         scan_start = file_path if self._is_project_file(file_path, Path(cwd or ".").resolve()) else self._command_python_file(command, cwd)
@@ -90,9 +96,12 @@ class RootCauseAnalyzer:
             symbol=context.get("symbol") if isinstance(context, dict) else None,
             project_context=project_context,
             frames=parsed.get("frames") or [],
+            repo_summary=repo_snapshot.summary(),
         )
 
         self._enrich_from_file(evidence)
+        if evidence.missing_name and project_context:
+            evidence.exact_symbol_matches = find_exact_local_symbol(project_context.root, evidence.missing_name, suffixes={".py"})
         evidence.framework = self._detect_framework(evidence, command)
         if evidence.framework and evidence.framework not in project_context.frameworks:
             project_context.frameworks = [evidence.framework]
@@ -124,9 +133,11 @@ CODE_CONTEXT:
 PROJECT_CONTEXT:
 framework={evidence.framework}
 safe_scan={evidence.project_context.summary() if evidence.project_context else ""}
+repo_graph={evidence.repo_summary}
 imports={evidence.imports}
 nearby_functions={evidence.nearby_functions}
 local_names_before_line={evidence.local_names_before_line}
+exact_symbol_matches={evidence.exact_symbol_matches}
 
 Return:
 ROOT_CAUSE:
@@ -296,6 +307,17 @@ CONFIDENCE:
                 return cause, confidence
 
         if evidence.error_type == "NameError" and evidence.missing_name:
+            if len(evidence.exact_symbol_matches) == 1:
+                target = evidence.exact_symbol_matches[0]
+                cause = (
+                    f"The symbol `{evidence.missing_name}` is used on line {evidence.line_number}, and an exact "
+                    f"local definition exists in `{target}`, but the failing file does not import it."
+                )
+                evidence.suggested_fix = f"Import `{evidence.missing_name}` from `{target}` or correct the existing import."
+                evidence.source = "repo_engine"
+                parts.append(f"exact local symbol match: {target}")
+                evidence.evidence = parts
+                return cause, 91
             if evidence.missing_name not in evidence.local_names_before_line:
                 cause = (
                     f"The variable `{evidence.missing_name}` is used on line {evidence.line_number} "
