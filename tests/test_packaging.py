@@ -29,7 +29,7 @@ class PackagingTests(unittest.TestCase):
         project = self.pyproject["project"]
 
         self.assertEqual(project["name"], "ghostfix-ai")
-        self.assertEqual(project["version"], "0.7.0")
+        self.assertEqual(project["version"], "1.0.0")
         self.assertEqual(project["readme"], "README.md")
         self.assertEqual(project["requires-python"], ">=3.10")
         self.assertEqual(project["license"]["text"], "MIT")

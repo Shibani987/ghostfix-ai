@@ -1,7 +1,7 @@
 # GhostFix AI
 
 <p align="center">
-  <strong>No prompts. Just logs. Instant diagnosis.</strong>
+  <strong>No prompts. Just logs. Safe local fixes when validation passes.</strong>
 </p>
 
 <p align="center">
@@ -22,7 +22,7 @@
   </a>
 </p>
 
-GhostFix is a local-first runtime debugging CLI that watches terminal and dev-server logs, detects crashes automatically, explains likely root causes, and applies only safety-gated deterministic fixes. Python auto-fix is the mature path; JavaScript and TypeScript fixes are limited to guarded allowlisted patch previews. No API key required. Local-first by default.
+GhostFix is a local-first runtime debugging CLI that watches terminal and dev-server logs, detects crashes automatically, explains likely root causes, and applies only safety-gated validated fixes. Python auto-fix is the mature path; supported JavaScript, TypeScript, React, Next.js, Node/Express, Django, Flask, and FastAPI fixes can enter a bounded autonomous sandbox loop with candidate ranking, retry, rerun, regression checks, and project validation. No API key required. Local-first by default.
 
 
 ## See GhostFix in Action
@@ -62,8 +62,8 @@ ghostfix watch "php artisan serve"
 | `uvicorn main:app --reload` | FastAPI/Uvicorn | Suggestions plus Python allowlist |
 | `node server.js`, `npm start`, `npm run dev` | Node/Express or package-script framework | JS/TS tiny allowlist only |
 | `npm run dev`, `pnpm dev`, `next dev`, `vite` | Next.js or React/Vite from package markers | JS/TS tiny allowlist only |
-| `tsc --noEmit`, `npm run build` | TypeScript/build | Suggestions; simple JS/TS allowlist when exact source target exists |
-| `php artisan serve`, `php index.php` | PHP/Laravel | PHP missing-semicolon allowlist only |
+| `tsc --noEmit`, `npm run build` | TypeScript/build | Guarded JS/TS allowlist with autonomous sandbox validation when project validation is available |
+| `php artisan serve`, `php index.php` | PHP/Laravel | Legacy guarded PHP missing-semicolon preview only |
 
 GhostFix also detects tooling and wrong-root failures before or after startup:
 missing `pnpm`, `npm`, `node`, `php`, `uvicorn`, `flask`, missing `manage.py`, missing `package.json`, missing `server.js`, missing Laravel `artisan`, missing `tsconfig.json`, and invalid Next.js roots.
@@ -76,7 +76,7 @@ missing `pnpm`, `npm`, `node`, `php`, `uvicorn`, `flask`, missing `manage.py`, m
 | Local-first by default | Works entirely offline, no API keys or cloud dependencies required. |
 | No API key required | All processing happens locally on your machine. |
 | Watch mode for dev servers | Monitors long-running processes and catches errors in real-time. |
-| Safety-gated fixes | Python fixes are mature; JS/TS fixes are limited, allowlisted, previewed, backed up, and rollback-aware. |
+| Safety-gated fixes | Python fixes are mature; JS/TS fixes are limited, allowlisted, validated in a sandbox/retry loop when possible, previewed, backed up, and rollback-aware. |
 
 ## Safety-first
 
@@ -98,6 +98,11 @@ Production-minded local debugging CLI. Enterprise-evaluation-ready candidate. No
 - Django, Flask, FastAPI, and Uvicorn startup/runtime diagnosis.
 - JavaScript, Node.js, TypeScript, React, and Next.js dev-log diagnosis.
 - Framework-aware Next.js suggestions for module resolution, missing env vars, API route 500s, Ollama/local-service failures, build/syntax errors, TypeScript errors, port conflicts, and hydration-style messages.
+- Guarded Next.js Ollama route fix path for exact local source cases, with `/api/tags` preflight, model checks, timeout handling, `.env.example` guidance, and required `npm run build` validation.
+- Iterative sandbox retry loop for supported Python/Django/Flask/FastAPI and JS/TS framework fixes, with max 2 retries, regression detection, duplicate suppression, telemetry, and validation-first convergence.
+- Validation-driven autonomous agent layer for supported Python/Django/Flask/FastAPI, Node/Express, Next.js, React, and TypeScript cases, with sandbox tool-use, up to 3 patch candidates, max 3 repair loops, candidate ranking, rerun observation, and convergence telemetry.
+- Repo graph intelligence for imports, exports, routes, components, and framework entrypoints.
+- Autonomous benchmark metrics for solve rate, regression rate, validation success rate, retry success rate, and unresolved rate.
 - PHP error detection.
 - Brain v4 runtime routing as an optional guarded local reasoning layer.
 - Local incident history in `.ghostfix/incidents.jsonl`.
@@ -109,9 +114,9 @@ Production-minded local debugging CLI. Enterprise-evaluation-ready candidate. No
 ## What Does Not Work Yet
 
 - Broad JavaScript, TypeScript, React, Next.js, and PHP auto-fix is intentionally disabled.
-- JS/TS patching is limited and experimental; only allowlisted one-line source repairs may be offered.
+- JS/TS patching is limited and experimental; allowlisted one-line source repairs and selected validated framework patches may be offered.
 - Framework configuration fixes are diagnosis-only.
-- Repo-aware multi-file edits are not part of the current MVP.
+- Repo-aware multi-file edits are limited to validated allowlisted framework fixes and rollback-capable autonomous candidates.
 - Brain v4 output is advisory and cannot bypass safety policy.
 - CPU generation with Brain v4 can be slow, especially on Windows.
 - GhostFix is not a security scanner, full static analyzer, or production observability platform.
@@ -122,10 +127,10 @@ Production-minded local debugging CLI. Enterprise-evaluation-ready candidate. No
 GhostFix is ready for local daily trial use, but it is still a beta-quality developer tool:
 
 - Python runtime diagnosis is the most mature path.
-- Node, JavaScript, TypeScript, React, Next.js, and PHP support is strongest for diagnosis and suggestions; JS/TS patching is intentionally narrow.
+- Node, JavaScript, TypeScript, React, and Next.js support is strongest for diagnosis and guarded validated autonomous/source patches; PHP remains legacy diagnosis plus simple guarded preview support.
 - Framework configuration issues are explained, not auto-edited.
 - Brain v4 is optional and advisory.
-- Auto-fix covers narrow deterministic Python patches plus tiny JS/TS/PHP/setup allowlists with confirmation, backup or create-file rollback metadata, audit, and rollback.
+- Auto-fix covers narrow deterministic Python patches, guarded JS/TS framework/source patches, bounded autonomous candidates for supported stacks, and legacy tiny PHP/setup allowlists with confirmation, backup or create-file rollback metadata, audit, and rollback.
 - Long-running watch mode is bounded and duplicate-aware, but it is not a full observability system.
 
 ## Safety Guarantees
@@ -171,8 +176,9 @@ local developer beta, not an enterprise production platform.
 ## What GhostFix Will Never Do
 
 - It will never upload your code, logs, incidents, or feedback without an explicit feature and configuration.
-- It will never enable broad autonomous coding from watch mode.
+- It will never enable broad or unrestricted autonomous coding from watch mode.
 - It will never apply JavaScript, framework config, dependency install, database, network, or destructive filesystem fixes automatically.
+- It will never edit `.env`, `.env.local`, secrets, auth, database, payment, security, or deployment config.
 - It will never run `npm install`, `pnpm install`, or dependency installation automatically.
 - It will never treat model confidence alone as permission to edit files.
 
@@ -238,7 +244,7 @@ For a local wheel rehearsal:
 
 ```powershell
 python -m build
-python -m pip install dist\ghostfix_ai-0.7.0-py3-none-any.whl
+python -m pip install dist\ghostfix_ai-1.0.0-py3-none-any.whl
 ghostfix --version
 ```
 
@@ -346,7 +352,7 @@ Useful options:
 - `--cwd PATH`: run the watched command from another directory.
 - `--no-brain`: disable Brain routing/generation for the session.
 - `--brain-mode auto|off|route-only|generate`: select Brain v4 runtime behavior.
-- `--fix`: allow the existing deterministic Python auto-fix prompts.
+- `--fix`: allow existing deterministic safe auto-fix prompts after validation.
 
 Watch mode does not silently rewrite code. Non-Python edits remain limited to explicit guarded allowlists; everything else is diagnosis-only.
 
@@ -458,7 +464,7 @@ Latest verified public snapshot:
 
 | Area | Result |
 | --- | --- |
-| Unit/integration tests | `python -m unittest discover tests`: 244 tests, OK |
+| Unit/integration tests | `python -m unittest discover tests`: 311 tests, OK |
 | Watch mode benchmark | language 100%, runtime 100%, error_type 100%, root_cause 100%, safety 100% |
 | Real-world deterministic route-only | 10 files, 7.492s total, 0.749s avg deterministic runtime, 100% deterministic solve rate, 0% unresolved, Brain activations 0/10 |
 | Brain escalation route-only | 12 files, 3.435s total, 0.283s avg brain-assisted routing runtime, Brain activations 12/12, Brain escalations 12/12, 58.3% unresolved |
@@ -482,10 +488,14 @@ GhostFix uses a hybrid pipeline:
 6. Detect language, runtime, framework, error type, and source location.
 7. Apply deterministic rules and known-case memory first.
 8. Use retrieval and optional local reasoning for broader diagnosis.
-9. Route hard cases to Brain v4 when enabled.
-10. Generate a diagnosis, confidence, likely cause, and suggested fix.
-11. Offer auto-fix only when the safety policy allows a deterministic allowlisted patch.
-12. Write local incident history for later review.
+9. For supported framework fixes, build import/export/route/component/entrypoint graphs and inspect package/framework metadata in a temporary sandbox.
+10. Generate up to 3 bounded patch candidates for safe supported cases.
+11. Rank candidates by validation success, regression score, confidence, repo consistency, and rerun output quality.
+12. Retry up to three repair loops when a new deterministic validation failure appears, stopping on duplicates, regressions, or confidence drops.
+13. Route hard cases to Brain v4 when enabled.
+14. Generate a diagnosis, confidence, likely cause, and suggested fix.
+15. Offer auto-fix only when the safety policy allows a validated allowlisted patch with rollback metadata.
+16. Write local incident history for later review.
 
 Beginner-friendly details are in [docs/PROJECT_OVERVIEW.md](docs/PROJECT_OVERVIEW.md). A comparison with other tools is in [docs/WHY_DIFFERENT.md](docs/WHY_DIFFERENT.md).
 
@@ -504,7 +514,7 @@ Generated reports, caches, local environment files, local feedback/runtime state
 ## Limitations
 
 - Python is the mature path.
-- JavaScript, TypeScript, and PHP support is diagnosis-first with only tiny guarded allowlisted patch paths.
+- JavaScript and TypeScript support is diagnosis-first with guarded allowlisted autonomous/validated patch paths; PHP remains legacy guarded preview support only.
 - Auto-fix is deliberately conservative.
 - Brain v4 requires compatible local model files and optional ML dependencies.
 - Brain v4 generation can be slow on CPU.
@@ -512,10 +522,10 @@ Generated reports, caches, local environment files, local feedback/runtime state
 
 ## Roadmap
 
-- Current MVP: promptless runtime diagnosis, reliability core v1, watch mode, daemon v1, safe Python auto-fix, guarded Brain v4 routing, local incident memory, and local production-like log classification.
+- Current MVP: promptless runtime diagnosis, reliability core v1, watch mode, daemon v1, safe Python auto-fix, validation-driven autonomous framework fixes for supported stacks, guarded Brain v4 routing, local incident memory, and local production-like log classification.
 - Next: recurring incident summaries and daemon polish.
 - Later: VS Code extension.
-- Later: repo-aware multi-file fixes.
+- Later: broader repo-aware multi-file fixes after more validation fixtures.
 - Later: stronger local model.
 - Later: user-reviewed local training exports for model and retriever improvement.
 - Later: CI/CD and observability integrations.

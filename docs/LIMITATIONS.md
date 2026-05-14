@@ -16,13 +16,13 @@ Latest verified route-only escalation result: 12 files, Brain activations 12/12,
 
 ## Auto-Fix Is Intentionally Limited
 
-GhostFix only auto-fixes narrow deterministic allowlisted cases. Python is the mature path; JS/TS and PHP repairs are tiny guarded patch paths only. Every edit requires patch generation, validation, rollback metadata, and user approval. Model confidence alone does not enable edits.
+GhostFix only auto-fixes narrow validated allowlisted cases. Python is the mature path; supported JS/TS and Python framework repairs require sandbox/project validation, and PHP remains legacy simple guarded preview support. Every edit requires patch generation, validation, rollback metadata, and user approval. Model confidence alone does not enable edits.
 
 This means many real errors produce diagnosis and suggested fixes rather than patches. That is by design.
 
 ## Non-Python Is Diagnosis-First For Now
 
-JavaScript/Node, TypeScript, npm, and other non-Python runtime logs can be classified and diagnosed. Broad non-Python auto-fix remains disabled; only tiny guarded JS/TS/PHP allowlisted repairs may be previewed and applied.
+JavaScript/Node, React, Next.js, TypeScript, npm, and other non-Python runtime logs can be classified and diagnosed. Broad non-Python auto-fix remains disabled; only guarded JS/TS allowlisted repairs with validation and bounded autonomous candidates for supported stacks, plus legacy tiny PHP previews, may be offered.
 
 For non-Python errors, GhostFix provides:
 

@@ -62,7 +62,7 @@ class DoctorTests(unittest.TestCase):
         result = CliRunner().invoke(app, ["--version"])
 
         self.assertEqual(result.exit_code, 0, result.output)
-        self.assertIn("GhostFix AI v0.7.0", result.output)
+        self.assertIn("GhostFix AI v1.0.0", result.output)
 
     def test_config_init_and_show_use_local_config(self):
         runner = CliRunner()

@@ -2,6 +2,54 @@
 
 All notable public-release changes are tracked here.
 
+## 1.0.0 - 2026-05-14
+
+### Added
+
+- Validation-driven autonomous debugging agent for supported Python, Django, Flask, FastAPI, Node/Express, Next.js, React, and TypeScript workflows.
+- Bounded sandbox tool-use engine that can inspect repo graphs, package metadata, TypeScript config, routes, imports, exports, components, entrypoints, and validation reruns without touching the real project.
+- Multi-candidate patch generation and ranking for up to 3 safe candidates using validation success, regression score, confidence, repo consistency, and rerun output quality.
+- Max 3-loop autonomous repair convergence with duplicate-failure, regression, and confidence-collapse stop conditions.
+- Repo graph intelligence now includes import, export, route, component, and entrypoint graphs.
+- Autonomous benchmark report metrics for solve rate, regression rate, validation success rate, retry success rate, and unresolved rate.
+
+### Safety
+
+- Validation remains the authority: no real patch is applyable unless sandbox validation passes, rerun output is clean, regression checks pass, and rollback-capable file metadata exists.
+- Auth, payment, database schema/migration, secret, `.env`, deployment, package-install, infrastructure, and security-sensitive changes remain blocked.
+- PHP remains legacy diagnosis/simple guarded preview support only and is not part of the v1 autonomous agent.
+
+## 0.9.0 - 2026-05-14
+
+### Added
+
+- Iterative validation-first debugging engine for supported Python, Django, Flask, FastAPI, Node/Express, Next.js, React, and TypeScript workflows.
+- Sandbox retry loop with max 2 retries, duplicate-failure suppression, confidence-drop stop conditions, regression detection, retry telemetry, and patch confidence scoring.
+- Framework-aware validation command selection for Python compile/rerun, JS/TS `npm run build`, `tsc --noEmit`, and targeted reruns when available.
+- Repo context graph payloads for iterative runs, including imports, exports, routes, app entrypoints, and framework structure.
+- Multi-file rollback verification metadata for converged iterative patches.
+
+### Safety
+
+- Validation always dominates generation: no iterative patch is offered unless sandbox validation converges.
+- Auth, payment, database migration, secret, `.env`, deployment, security-sensitive, package-install, and external-service changes remain blocked.
+- Retry loops stop on duplicate failures, unparsed failures, confidence drops, or regressions.
+
+## 0.8.0 - 2026-05-14
+
+### Added
+
+- Codex-like local framework fixer path for supported runtime/dev-server errors.
+- Guarded Next.js Ollama route fixer that maps `/api/generate-resume` to the local route and `resumeAgent.ts`, adds an Ollama preflight against `/api/tags`, checks the configured model, adds `OLLAMA_TIMEOUT_MS`, and writes safer non-secret defaults to `.env.example` only.
+- Temporary project-copy validation for framework patches with required `npm run build` before a fix is offered.
+- Multi-file backup metadata for framework fixes so rollback can restore all changed files.
+
+### Safety
+
+- GhostFix still does not install packages, edit `.env` or secrets, start services, or modify auth, database, payment, security, deployment, or broad framework config automatically.
+- Framework fixes require exact local source targets, sandbox validation, project validation, diff preview, user confirmation, audit, and rollback metadata.
+- Service/config failures remain blocked unless GhostFix can patch a safe project source guard and validation passes.
+
 ## 0.7.0 - 2026-05-14
 
 ### Added

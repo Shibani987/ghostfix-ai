@@ -60,6 +60,7 @@ that stable failure.
 ## Non-Goals
 
 Reliability hardening does not expand auto-fix safety, enable cloud behavior, or
-change Brain/model routing. Watch mode remains a local diagnostic loop; it does
-not autonomously edit code unless the existing deterministic safe auto-fix flow
-is explicitly enabled and confirmed.
+change Brain/model routing. Watch mode remains a local diagnostic loop; bounded
+autonomous repair can only produce a validated diff for supported safe cases and
+still requires the explicit safe auto-fix flow and user confirmation before any
+real file is edited.

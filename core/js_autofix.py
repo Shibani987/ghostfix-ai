@@ -233,7 +233,12 @@ def _named_exports(text: str) -> list[str]:
 
 def _is_sensitive_path(path: Path) -> bool:
     lowered = [part.lower() for part in path.parts]
-    return any(part in SENSITIVE_PARTS or any(token in part for token in SENSITIVE_PARTS) for part in lowered)
+    short = {"db"}
+    return any(
+        part in SENSITIVE_PARTS
+        or any(token not in short and token in part for token in SENSITIVE_PARTS)
+        for part in lowered
+    )
 
 
 def _line_ending(line: str) -> str:

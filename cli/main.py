@@ -19,7 +19,7 @@ from rich.table import Table
 from rich.panel import Panel
 from rich import print as rprint
 
-APP_VERSION = "0.7.0"
+APP_VERSION = "1.0.0"
 
 
 app = typer.Typer(
@@ -884,6 +884,51 @@ def rollback_last():
     metadata = (latest or {}).get("rollback_metadata") or {}
     backup = metadata.get("backup")
     target = metadata.get("target") or (latest or {}).get("file")
+    backups = metadata.get("backups") or []
+
+    if latest and backups and isinstance(backups, list):
+        restore_rows = []
+        for row in backups:
+            backup_path = _incident_path((row or {}).get("backup", ""))
+            target_path = _incident_path((row or {}).get("target", ""))
+            if not backup_path.exists() or not target_path.parent.exists():
+                print("STATUS: rollback failed")
+                print("ROLLBACK_AVAILABLE: no")
+                print("Rollback available: no")
+                print("NEXT_STEP: verify the backup file paths still exist")
+                console.print(f"[red]Rollback failed: backup metadata is invalid for {target_path}[/red]")
+                raise typer.Exit(1)
+            restore_rows.append((backup_path, target_path))
+        print("STATUS: rollback ready")
+        print("ROLLBACK_AVAILABLE: yes")
+        print("Rollback available: yes")
+        print(f"NEXT_STEP: confirm restore of {len(restore_rows)} files")
+        print(f"Next step: confirm restore of {len(restore_rows)} files")
+        confirmed = input(f"Restore {len(restore_rows)} files from GhostFix backups? [y/n] ").strip().lower() == "y"
+        if not confirmed:
+            print("STATUS: rollback cancelled")
+            print("No code was changed")
+            console.print("Rollback cancelled.")
+            return
+        for backup_path, target_path in restore_rows:
+            shutil.copyfile(backup_path, target_path)
+        print("STATUS: rollback completed")
+        print("NEXT_STEP: rerun your command to verify the restored files")
+        print("Next step: rerun your command to verify the restored files")
+        console.print("Rollback completed.")
+
+        from core.fix_audit import record_fix_audit
+
+        record_fix_audit(
+            target_file=str(restore_rows[0][1]) if restore_rows else "",
+            backup_path=str(restore_rows[0][0]) if restore_rows else "",
+            patch=f"rollback restore {len(restore_rows)} files",
+            validator_result="rollback completed",
+            rollback_available=True,
+            user_confirmed=True,
+            root=Path.cwd(),
+        )
+        return
 
     if not latest or not backup or not target:
         print("STATUS: no rollback")

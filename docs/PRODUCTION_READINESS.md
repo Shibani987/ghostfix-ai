@@ -1,6 +1,6 @@
 # Production Readiness
 
-GhostFix is a production-minded local CLI MVP for developer debugging loops. It is not yet a fully autonomous enterprise debugger.
+GhostFix is a production-minded local CLI MVP for developer debugging loops. It includes a bounded local autonomous repair agent for supported safe framework failures, but it is not an unrestricted enterprise debugger or hosted observability platform.
 
 ## Current Strengths
 
@@ -12,16 +12,17 @@ GhostFix is a production-minded local CLI MVP for developer debugging loops. It 
 - Local production-like log classification for explicit user-provided files, including auth anomaly, repeated failure, infrastructure, dependency, and app bug categories.
 - Disabled-by-default Sentry, PostHog, and Clarity interface stubs for future explicit integrations.
 - Safety-gated deterministic Python auto-fix with patch preview, backup, user confirmation, sandbox validation, and rollback metadata.
+- Bounded autonomous sandbox repair for supported Python/Django/Flask/FastAPI, Node/Express, Next.js, React, and TypeScript cases with candidate ranking, rerun validation, regression checks, and rollback metadata.
 - Optional Brain v4 routing that remains advisory and cannot bypass safety policy.
 - Release and production validation commands for local pre-push checks.
 
 ## Current Limitations
 
-- Python is the mature path; JavaScript, TypeScript, Node, and PHP are diagnosis-first with only tiny guarded patch allowlists.
+- Python is the mature path; JavaScript, TypeScript, Node/Express, React, and Next.js are diagnosis-first with guarded validated patch allowlists and bounded autonomous sandbox repair for supported safe cases. PHP remains legacy diagnosis plus simple guarded preview support.
 - Repo-aware context is intentionally bounded and may miss deep project conventions.
 - Daemon v1 runs foreground-first and is not a full service manager.
 - Brain v4 requires compatible local model files and optional ML dependencies.
-- Auto-fix is deliberately narrow and does not perform broad refactors or multi-file changes.
+- Auto-fix is deliberately narrow and does not perform broad refactors or unrestricted multi-file changes.
 - Release and production validation are local smoke gates, not replacements for CI, security review, or real-user validation.
 - Production telemetry integrations are not live today. GhostFix does not monitor production systems, fetch hosted telemetry, or use API keys unless a future explicit integration is built and configured by the user.
 

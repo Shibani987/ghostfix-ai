@@ -8,11 +8,12 @@ GhostFix is a local-first runtime debugging pipeline. It is designed to keep fas
 CLI / Watch Mode
   -> structured log-event pipeline
   -> repo-aware context engine
+  -> bounded autonomous sandbox agent for supported stacks
   -> production-like signal classifier for user-provided logs
   -> parser / runtime detector
   -> memory / deterministic rules / retriever
   -> guarded Brain v4 escalation
-  -> safety policy / deterministic auto-fix
+  -> safety policy / validated auto-fix
   -> local incident history
   -> reports and feedback logs
 ```
@@ -83,7 +84,7 @@ After log-event normalization, the parser extracts structured signals from noisy
 - missing environment variables
 - port conflicts
 
-The runtime detector classifies logs as Python, JavaScript/Node, TypeScript, PHP, or unknown. Non-Python errors are diagnosis-first; only explicit low-risk JS/TS and PHP allowlisted repairs may produce patch previews.
+The runtime detector classifies logs as Python, JavaScript/Node, TypeScript, PHP, or unknown. Supported Python/Django/Flask/FastAPI, Node/Express, Next.js, React, and TypeScript repairs may enter the bounded autonomous sandbox agent; PHP remains limited to legacy simple guarded previews and is not part of the autonomous repair loop.
 
 ### Repo-Aware Context
 
@@ -98,6 +99,23 @@ It collects bounded context from:
 - safe project config files
 
 It never reads `.env` or secret-named files, skips generated/heavy directories, and enforces max-file and max-character budgets.
+
+### Autonomous Repair Agent
+
+GhostFix v1.0 adds a validation-driven local agent for supported stacks only: Python, Django, Flask, FastAPI, Node/Express, Next.js, React, and TypeScript. The agent can use bounded tools inside a temporary project copy to inspect imports, exports, routes, components, entrypoints, `package.json`, and `tsconfig.json`; rerun build/test/runtime commands; and observe validation output.
+
+The loop is intentionally small:
+
+1. detect the failure
+2. build a repo graph
+3. generate up to 3 safe candidates
+4. validate each candidate in the sandbox
+5. rank by validation success, regression score, confidence, repo consistency, and rerun output quality
+6. retry at most 3 repair loops
+7. stop on regression, duplicate failure, or confidence collapse
+8. expose a diff only after validation passes and rollback-capable metadata exists
+
+The agent cannot install packages, edit `.env` or secrets, modify auth/payment/database/deployment/security-sensitive code, or apply a real patch without user approval.
 
 ### Production-Like Signal Classification
 
@@ -137,7 +155,7 @@ Brain v4 output is advisory:
 
 ### Safety And Auto-Fix
 
-The safety policy is the final gate. Auto-fix is limited to deterministic safe allowlists with patch validation, temporary sandbox validation, patch preview, user confirmation, backup behavior, and rollback metadata.
+The safety policy is the final gate. Auto-fix is limited to deterministic safe allowlists with patch validation, temporary sandbox or project-copy validation, patch preview, user confirmation, backup behavior, and rollback metadata.
 
 Blocked cases include:
 

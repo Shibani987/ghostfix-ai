@@ -8,7 +8,7 @@ Runtime errors are noisy. A traceback or dev-server log may include many lines, 
 
 ## The Solution
 
-GhostFix watches the command that failed, extracts the important evidence, and explains the most likely root cause. For a small set of safe deterministic cases, it can also preview and apply a fix after passing safety checks. Python is the mature path; JS/TS and PHP edits are intentionally tiny guarded allowlists.
+GhostFix watches the command that failed, extracts the important evidence, and explains the most likely root cause. For a small set of safe validated cases, it can preview and apply a fix after passing safety checks. Python is the mature path; supported Python/Django/Flask/FastAPI, Node/Express, Next.js, React, and TypeScript fixes can use a bounded autonomous sandbox loop with candidate ranking and project validation. PHP remains legacy simple guarded preview support.
 
 The core idea is simple: no prompts, just logs, instant fixes when they are safe.
 
@@ -21,8 +21,10 @@ The core idea is simple: no prompts, just logs, instant fixes when they are safe
 5. The detector identifies language, framework, runtime, error type, file path, and line number when available.
 6. Deterministic rules handle common known cases first.
 7. Memory and retrieval help with repeated or similar failures.
-8. Harder unknown cases can route to Brain v4 if it is enabled and available.
-9. The final result includes the cause, likely fix, confidence, and whether auto-fix is allowed.
+8. Supported framework patches are tested in a temporary project copy.
+9. If validation exposes a new deterministic failure, GhostFix can retry up to two times.
+10. Harder unknown cases can route to Brain v4 if it is enabled and available.
+11. The final result includes the cause, likely fix, confidence, and whether auto-fix is allowed.
 
 ## Why Hybrid Routing Is Used
 
@@ -60,20 +62,20 @@ Watch mode starts a real command such as a Python script, Django-like server, Fa
 
 Before parsing, the reliability core converts output into log events, buffers partial traceback chunks, bounds large logs, and makes sure malformed unicode or noisy mixed output does not crash GhostFix.
 
-When GhostFix detects an error, it prints a compact diagnosis. With `--verbose`, it also shows routing details, evidence, and Brain telemetry. Watch mode does not apply fixes unless `--fix` is passed, and even then only safe deterministic Python fixes are eligible.
+When GhostFix detects an error, it prints a compact diagnosis. With `--verbose`, it also shows routing details, evidence, and Brain telemetry. Watch mode does not apply fixes unless `--fix` is passed, and even then only validated allowlisted fixes are eligible.
 
 ## How Auto-Fix Safety Works
 
-Auto-fix is intentionally limited. GhostFix checks the error type, source file, patch plan, and generated Python syntax before applying anything. A backup is created first using the `*.bak_YYYYMMDD_HHMMSS` pattern.
+Auto-fix is intentionally limited. GhostFix checks the error type, source file, patch plan, and validation result before applying anything. Python patches use AST/compile checks; supported JS/TS framework patches use temporary project-copy validation such as `npm run build` or `tsc --noEmit` when available. A backup is created first using the `*.bak_YYYYMMDD_HHMMSS` pattern.
 
-Auto-fix is blocked for ambiguous cases, framework configuration, missing packages, unsafe runtime/data-shape errors, and non-Python languages.
+Auto-fix is blocked for ambiguous cases, broad framework configuration, missing packages, unsafe runtime/data-shape errors, secrets, auth, database, payment, deployment, and any unsupported language/path.
 
 ## Multi-Language Support Today
 
 Python is the mature path. GhostFix can diagnose Python tracebacks and common Django, Flask, FastAPI, and Uvicorn failures.
 
-JavaScript, Node.js, TypeScript-style dev logs, and PHP errors are supported for detection and diagnosis. Broad non-Python auto-fix remains disabled, but tiny guarded JS/TS and PHP patch previews may be offered when an exact allowlisted source repair is available.
+JavaScript, Node.js, React, Next.js, and TypeScript-style dev logs are supported for detection, diagnosis, and guarded allowlisted fixes when validation can prove the patch. The v1 autonomous loop may inspect repo graphs, rank up to 3 candidates, rerun validation, and converge only when regression checks pass. PHP errors are still supported for diagnosis and legacy simple guarded previews.
 
 ## Current Product Direction
 
-The current direction is to make GhostFix more useful across longer development sessions: daemon polish, recurring incident summaries, stronger local models, editor integration, repo-aware multi-file analysis, CI/CD integration, and observability-style incident reporting.
+The current direction is to make GhostFix more useful across longer development sessions: daemon polish, recurring incident summaries, stronger local models, editor integration, broader validated framework fix coverage, CI/CD integration, and observability-style incident reporting.

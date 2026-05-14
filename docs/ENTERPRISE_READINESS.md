@@ -19,7 +19,7 @@ GhostFix is an enterprise-evaluation-ready local debugging CLI candidate. It is 
 
 - Brain v4 routing/generation is optional and advisory.
 - Watch mode handles noisy and long-running local logs, but is not production observability.
-- Non-Python languages are diagnosis-first with only tiny guarded allowlisted patch paths.
+- Non-Python support is diagnosis-first; JS/TS framework fixes are guarded, validation-first, and may use the bounded v1 autonomous sandbox agent for supported safe cases, while PHP remains legacy simple guarded preview support.
 - Release validation provides local readiness evidence, not a compliance certification.
 
 ## Explicitly Not Supported

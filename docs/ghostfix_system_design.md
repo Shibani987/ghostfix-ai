@@ -2,7 +2,7 @@
 
 ## Product Overview
 
-GhostFix AI is a local-first debugging assistant. It runs or watches terminal commands, detects tracebacks and runtime errors, extracts nearby source context, explains the likely root cause, recommends a fix, and applies only small validated allowlisted patches when the safety policy allows it. Python is the mature path; JS/TS and PHP edits remain tiny guarded repair paths.
+GhostFix AI is a local-first debugging assistant. It runs or watches terminal commands, detects tracebacks and runtime errors, extracts nearby source context, explains the likely root cause, recommends a fix, and applies only small validated allowlisted patches when the safety policy allows it. Python is the mature path; supported Python/Django/Flask/FastAPI, Node/Express, Next.js, React, and TypeScript fixes can enter a bounded autonomous sandbox agent, and PHP remains legacy simple guarded preview support.
 
 The problem GhostFix solves is the gap between seeing a terminal traceback and safely making the next code change. It combines deterministic rules, local memory, a TF-IDF retriever, optional local embeddings, optional local LLM reasoning, and classic ML "Brain" models to produce useful guidance without depending on cloud inference.
 

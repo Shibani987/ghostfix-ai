@@ -80,4 +80,4 @@ ghostfix run tests/manual_errors/name_error.py --dry-run
 - Use dry-run for public demos unless the point is specifically backup and rollback.
 - Keep the terminal width at 90-110 columns.
 - Do not show real project secrets, `.env` files, private logs, or proprietary source.
-- Do not claim broad JavaScript, TypeScript, or PHP auto-fix; only tiny guarded allowlisted patch previews are supported.
+- Do not claim broad JavaScript, TypeScript, or PHP auto-fix; JS/TS fixes are limited to guarded validated allowlists and bounded autonomous candidates for supported safe cases, while PHP remains legacy simple preview support.

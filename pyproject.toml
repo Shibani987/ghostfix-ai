@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "ghostfix-ai"
-version = "0.7.0"
+version = "1.0.0"
 description = "Repo-aware local-first autonomous runtime debugging CLI with rollback-safe validation-gated fixes."
 readme = "README.md"
 license = { text = "MIT" }

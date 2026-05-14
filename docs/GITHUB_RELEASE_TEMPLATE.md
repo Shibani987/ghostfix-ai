@@ -38,6 +38,6 @@ python -m twine check dist/*
 
 ## Honest Scope
 
-GhostFix is enterprise-evaluation-ready as a local debugging CLI candidate. It is not a hosted enterprise platform, autonomous coding agent, or production observability replacement.
+GhostFix is enterprise-evaluation-ready as a local debugging CLI candidate. It includes a bounded local autonomous repair agent for supported safe framework failures, but it is not a hosted enterprise platform, unrestricted coding agent, or production observability replacement.
 
-JavaScript, TypeScript, and PHP support remain diagnosis-first with only tiny guarded allowlisted patch paths.
+JavaScript and TypeScript support remain diagnosis-first with guarded validated allowlisted patch paths and bounded autonomous sandbox repair for supported safe cases. PHP remains legacy diagnosis plus simple guarded preview support.

@@ -1,6 +1,6 @@
 # Safety
 
-GhostFix is intentionally conservative. It diagnoses many errors, but it only edits code through narrow deterministic allowlists. Python is the mature path; JS/TS and PHP edits are tiny guarded patch paths only.
+GhostFix is intentionally conservative. It diagnoses many errors, but it only edits code through narrow validated allowlists. Python is the mature path; supported Python/Django/Flask/FastAPI, Node/Express, Next.js, React, and TypeScript edits may enter the bounded autonomous sandbox agent; PHP remains legacy simple guarded preview support.
 
 ## Auto-Fix Is Limited
 
@@ -37,7 +37,9 @@ GhostFix does not use auto-fix to delete files, remove broad code sections, rewr
 
 ## Non-Python Fixes Are Tiny Guarded Allowlists
 
-JavaScript, TypeScript, Node.js, and PHP support is mostly for detection and explanation. GhostFix may offer a patch only for explicit low-risk allowlisted cases such as JS/TS one-line repairs or PHP missing-semicolon repair. Framework config, dependencies, services, auth, database, payment, network, secrets, and project-intent changes remain suggestion-only.
+JavaScript, TypeScript, React, Next.js, and Node/Express support is mostly diagnosis-first with guarded allowlisted fixes only when validation passes. GhostFix may offer JS/TS one-line repairs, selected framework-safe patches, or bounded autonomous candidates after sandbox/project validation and regression checks. PHP remains limited to simple legacy previews such as missing-semicolon repair. Framework config, dependencies, services, auth, database, payment, network, secrets, and project-intent changes remain suggestion-only.
+
+For autonomous repair, validation dominates generation: a candidate cannot become applyable unless the sandbox passes, rerun output is clean, regression checks pass, and rollback-capable file metadata exists. Candidate ranking uses validation success, regression score, confidence, repo consistency, and rerun output quality.
 
 ## Brain Output Is Advisory And Guarded
 

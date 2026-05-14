@@ -674,7 +674,7 @@ SAFETY_REASON:
                 root=Path(self.cwd),
             )
             return {}
-        if not Confirm.ask("Apply non-Python allowlisted patch?", default=False):
+        if not Confirm.ask("Apply fix?", default=False):
             print("No code was changed")
             record_fix_audit(
                 target_file=patch_block.get("file_path", ""),

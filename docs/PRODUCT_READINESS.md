@@ -2,7 +2,7 @@
 
 ## Current Status
 
-GhostFix is demo-ready as a local-first debugging assistant. Python is the mature support path. Django, Flask, and FastAPI/Uvicorn runtime diagnosis are supported. JavaScript/Node.js and PHP are diagnosis-first with only tiny guarded patch allowlists.
+GhostFix is demo-ready as a local-first debugging assistant. Python is the mature support path. Django, Flask, and FastAPI/Uvicorn runtime diagnosis are supported. JavaScript/Node.js/React/Next.js/TypeScript are diagnosis-first with guarded validated patch allowlists and a bounded v1 autonomous sandbox agent for supported safe cases. PHP remains legacy diagnosis plus simple guarded preview support.
 
 GhostFix requires no cloud inference. It uses deterministic rules, memory, a TF-IDF retriever, optional local embeddings, optional local LLM reasoning, and local Brain artifacts.
 
@@ -49,7 +49,8 @@ Coverage includes:
 - Server traceback parsing
 - Framework detection isolation
 - Human-readable framework explanations
-- JS/PHP diagnosis-first diagnostics with tiny guarded patch allowlists
+- JS/TS diagnosis-first diagnostics with guarded validated patch allowlists and bounded autonomous candidate ranking for supported safe cases
+- PHP legacy diagnosis and simple guarded previews
 - Optional retriever fallback behavior
 - Optional local LLM fallback and safety behavior
 - Demo report generation
@@ -79,9 +80,9 @@ Skipped scenarios are allowed when optional runtimes such as PHP are not install
 
 ## Known Limitations
 
-- Python is mature; JavaScript and PHP are diagnosis-first.
+- Python is mature; JavaScript/TypeScript framework fixes are guarded and validation-first.
 - Framework auto-fix is blocked by design.
-- Broad JavaScript/PHP auto-fix is disabled outside explicit guarded allowlists.
+- Broad JavaScript/PHP auto-fix is disabled outside explicit guarded allowlists; PHP is not part of the v1 autonomous engine.
 - Optional embeddings require `sentence-transformers` and a local model already on disk.
 - Optional local LLM reasoning requires `transformers` and a local causal/instruct code model already on disk.
 - Local LLM output is advisory and never enables auto-fix by itself.
@@ -92,8 +93,8 @@ Skipped scenarios are allowed when optional runtimes such as PHP are not install
 
 - Add more Python framework fixtures and real-world examples.
 - Build optional local embedding index tooling.
-- Add more evaluation fixtures for local LLM diagnosis across React/Vite/Next.js, Node, Java, and PHP.
-- Expand JavaScript/Node and PHP parsers.
+- Add more evaluation fixtures for local LLM diagnosis across React/Vite/Next.js and Node.
+- Expand JavaScript/Node parser coverage while keeping unsupported languages out of the autonomous agent.
 - Add richer project-context evidence while preserving secret safety.
 - Improve demo/report formatting for public submissions.
 - Continue Brain v3.3 evaluation before any default promotion.

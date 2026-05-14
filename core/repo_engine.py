@@ -68,6 +68,8 @@ class DependencyGraph:
     imports: dict[str, list[str]] = field(default_factory=dict)
     exports: dict[str, list[str]] = field(default_factory=dict)
     routes: dict[str, list[str]] = field(default_factory=dict)
+    components: dict[str, list[str]] = field(default_factory=dict)
+    entrypoints: dict[str, list[str]] = field(default_factory=dict)
 
 
 @dataclass
@@ -89,6 +91,12 @@ class RepoSnapshot:
         route_count = sum(len(values) for values in self.graph.routes.values())
         if route_count:
             parts.append(f"routes={route_count}")
+        component_count = sum(len(values) for values in self.graph.components.values())
+        if component_count:
+            parts.append(f"components={component_count}")
+        entrypoint_count = sum(len(values) for values in self.graph.entrypoints.values())
+        if entrypoint_count:
+            parts.append(f"entrypoints={entrypoint_count}")
         return "; ".join(parts)
 
 
@@ -175,7 +183,12 @@ def is_sensitive_target(path: str | Path) -> bool:
     lowered_parts = [part.lower() for part in path.parts]
     if path.name.lower() in SECRET_NAMES:
         return True
-    return any(part in SENSITIVE_PARTS or any(token in part for token in SENSITIVE_PARTS) for part in lowered_parts)
+    short = {"db"}
+    return any(
+        part in SENSITIVE_PARTS
+        or any(token not in short and token in part for token in SENSITIVE_PARTS)
+        for part in lowered_parts
+    )
 
 
 def classify_failure(
@@ -334,14 +347,20 @@ def _index_source_file(graph: DependencyGraph, path: Path, root: Path) -> None:
         graph.imports[rel] = _python_imports(text)
         graph.exports[rel] = _python_exports(text)
         graph.routes[rel] = _python_routes(text)
+        graph.components[rel] = []
+        graph.entrypoints[rel] = _python_entrypoints(text, rel)
     elif suffix in JS_TS_SUFFIXES:
         graph.imports[rel] = _js_imports(text)
         graph.exports[rel] = _js_exports(text)
         graph.routes[rel] = _js_routes(text, rel)
+        graph.components[rel] = _js_components(text, rel)
+        graph.entrypoints[rel] = _js_entrypoints(text, rel)
     elif suffix == ".php":
         graph.imports[rel] = _php_imports(text)
         graph.exports[rel] = _php_exports(text)
         graph.routes[rel] = _php_routes(text)
+        graph.components[rel] = []
+        graph.entrypoints[rel] = []
 
 
 def _python_imports(text: str) -> list[str]:
@@ -384,6 +403,17 @@ def _python_routes(text: str) -> list[str]:
     return sorted(set(routes))
 
 
+def _python_entrypoints(text: str, rel: str) -> list[str]:
+    values = []
+    if rel.endswith(("manage.py", "app.py", "main.py", "run.py")):
+        values.append(Path(rel).name)
+    for match in re.finditer(r"\b(app|api|application)\s*=\s*(?:FastAPI|Flask)\(", text):
+        values.append(match.group(1))
+    if "if __name__ == \"__main__\"" in text or "if __name__ == '__main__'" in text:
+        values.append("__main__")
+    return sorted(set(values))
+
+
 def _js_imports(text: str) -> list[str]:
     values = []
     values.extend(re.findall(r"from\s+['\"]([^'\"]+)['\"]", text))
@@ -414,6 +444,34 @@ def _js_routes(text: str, rel: str) -> list[str]:
     if api_match:
         routes.append("/api/" + api_match.group(1).replace("\\", "/"))
     return sorted(set(routes))
+
+
+def _js_components(text: str, rel: str) -> list[str]:
+    values = []
+    values.extend(re.findall(r"export\s+default\s+function\s+([A-Z][A-Za-z0-9_$]*)", text))
+    values.extend(re.findall(r"export\s+(?:function|class)\s+([A-Z][A-Za-z0-9_$]*)", text))
+    values.extend(re.findall(r"(?:const|let|var)\s+([A-Z][A-Za-z0-9_$]*)\s*=\s*(?:\([^)]*\)\s*=>|function\b)", text))
+    if Path(rel).suffix.lower() in {".jsx", ".tsx"} and re.search(r"export\s+default\b", text):
+        values.append(Path(rel).stem)
+    return sorted(set(values))
+
+
+def _js_entrypoints(text: str, rel: str) -> list[str]:
+    values = []
+    normalized = rel.replace("\\", "/")
+    if normalized in {"src/main.tsx", "src/main.jsx", "src/index.tsx", "src/index.jsx", "pages/_app.tsx", "pages/_app.jsx"}:
+        values.append(normalized)
+    if re.search(r"createRoot\(|ReactDOM\.render\(", text):
+        values.append("react-dom")
+    if re.search(r"\b(?:app|router)\s*=\s*(?:express\(\)|Router\(\))", text):
+        values.append("express")
+    if re.search(r"\bapp\.listen\(", text):
+        values.append("node-server")
+    if re.search(r"(?:^|/)app/(?:page|layout)\.[cm]?[jt]sx?$", normalized):
+        values.append("next-app-router")
+    if re.search(r"(?:^|/)app/api/.+/route\.[cm]?[jt]s$", normalized):
+        values.append("next-api-route")
+    return sorted(set(values))
 
 
 def _php_imports(text: str) -> list[str]:

@@ -34,6 +34,8 @@ class PatchValidator:
 
         file_path = Path(safe_block.get("file_path", ""))
         action = safe_block.get("action") or "modify_file"
+        if action == "framework_multi_file":
+            return self._validate_framework_multi_file(safe_block)
         if action == "create_file":
             return self._validate_create_file(file_path, safe_block)
         if not file_path.exists():
@@ -88,6 +90,8 @@ class PatchValidator:
             }
 
         file_path = Path(safe_block["file_path"])
+        if safe_block.get("action") == "framework_multi_file":
+            return self._apply_framework_multi_file(safe_block, validation)
         if safe_block.get("action") == "create_file":
             file_path.parent.mkdir(parents=True, exist_ok=True)
             file_path.write_text(safe_block.get("replacement", ""), encoding="utf-8")
@@ -236,6 +240,180 @@ class PatchValidator:
                 "target": str(file_path),
             },
         )
+
+    def _validate_framework_multi_file(self, safe_block: Dict) -> PatchValidationResult:
+        language = safe_block.get("language")
+        js_frameworks = {"next.js", "react", "vite", "vite/react", "typescript", "express", "node"}
+        py_frameworks = {"python", "django", "flask", "fastapi"}
+        if language == "javascript/typescript":
+            if safe_block.get("framework") not in js_frameworks:
+                return PatchValidationResult(False, "Framework multi-file fixes are currently limited to guarded JS/TS framework patches.")
+        elif language == "python":
+            if safe_block.get("framework") not in py_frameworks:
+                return PatchValidationResult(False, "Python framework fixes are limited to Python/Django/Flask/FastAPI.")
+        else:
+            return PatchValidationResult(False, "Unsupported language for framework multi-file fix.")
+        if not safe_block.get("requires_project_validation"):
+            return PatchValidationResult(False, "Framework fixes require project validation.")
+        files = safe_block.get("files") or []
+        if not isinstance(files, list) or not files:
+            return PatchValidationResult(False, "Framework patch has no file targets.")
+        if len(files) > 4:
+            return PatchValidationResult(False, "Framework patch touches too many files.")
+
+        paths = [Path(item.get("file_path", "")) for item in files if isinstance(item, dict)]
+        if len(paths) != len(files):
+            return PatchValidationResult(False, "Framework patch file list is invalid.")
+        root = self._common_root(paths)
+        if not root:
+            return PatchValidationResult(False, "Framework patch files do not share a safe project root.")
+
+        for item, path in zip(files, paths):
+            if path.name in BLOCKED_FILE_NAMES or path.name.startswith(".env.") and path.name != ".env.example":
+                return PatchValidationResult(False, "Framework patch attempted to edit a blocked env/secret file.")
+            if any(part in BLOCKED_PARTS for part in path.parts):
+                return PatchValidationResult(False, "Framework patch target is blocked by safety policy.")
+            if language == "javascript/typescript" and path.suffix.lower() not in JS_TS_SUFFIXES and path.name != ".env.example":
+                return PatchValidationResult(False, "Framework patch may only edit JS/TS source files and .env.example.")
+            if language == "python" and path.suffix.lower() != ".py":
+                return PatchValidationResult(False, "Python framework patch may only edit Python source files.")
+            if path.exists():
+                current = path.read_text(encoding="utf-8")
+                if current != item.get("old_text", ""):
+                    return PatchValidationResult(False, f"Framework patch source changed before apply: {path}")
+            elif path.name != ".env.example" or item.get("old_text", ""):
+                return PatchValidationResult(False, "Framework patch can only create .env.example as a new file.")
+            new_text = item.get("new_text", "")
+            if self._looks_dangerous(new_text):
+                return PatchValidationResult(False, "Framework patch contains dangerous shell/file operation text.")
+            if len(new_text) > 24000:
+                return PatchValidationResult(False, "Framework patch target is too large for auto-apply.")
+
+        commands = safe_block.get("validation_commands") or []
+        if language == "javascript/typescript" and not any(command in commands for command in (["npm", "run", "build"], ["tsc", "--noEmit"])):
+            return PatchValidationResult(False, "JS/TS framework fixes require npm run build or tsc --noEmit validation.")
+        if language == "python" and not any(command[:3] == ["python", "-m", "py_compile"] for command in commands):
+            return PatchValidationResult(False, "Python framework fixes require py_compile validation.")
+
+        try:
+            sandbox_result = self._validate_framework_in_project_copy(root, files, commands)
+        except Exception as exc:
+            return PatchValidationResult(False, f"Framework sandbox validation failed: {exc}")
+        return sandbox_result
+
+    def _validate_framework_in_project_copy(self, root: Path, files: list[Dict], commands: list[list[str]]) -> PatchValidationResult:
+        with tempfile.TemporaryDirectory(prefix="ghostfix_framework_patch_") as temp_dir:
+            sandbox_root = Path(temp_dir) / root.name
+            ignore = shutil.ignore_patterns(
+                ".git",
+                ".ghostfix",
+                ".next",
+                "node_modules",
+                "dist",
+                "build",
+                "coverage",
+                "__pycache__",
+                ".pytest_cache",
+            )
+            shutil.copytree(root, sandbox_root, ignore=ignore)
+            for item in files:
+                source = Path(item["file_path"])
+                rel = source.resolve().relative_to(root.resolve())
+                target = sandbox_root / rel
+                target.parent.mkdir(parents=True, exist_ok=True)
+                target.write_text(item.get("new_text", ""), encoding="utf-8")
+            for command in commands:
+                result = subprocess.run(
+                    command,
+                    cwd=str(sandbox_root),
+                    stdout=subprocess.PIPE,
+                    stderr=subprocess.PIPE,
+                    text=True,
+                    timeout=120,
+                )
+                if result.returncode != 0:
+                    detail = (result.stderr or result.stdout or "").strip()[:500]
+                    return PatchValidationResult(
+                        False,
+                        f"Project validation failed for {' '.join(command)}: {detail}",
+                        {"sandbox_validated": False, "sandbox_strategy": "temporary_project_copy", "target": str(root)},
+                    )
+        return PatchValidationResult(
+            True,
+            "Framework patch passes temporary project copy validation and npm run build.",
+            {
+                "sandbox_validated": True,
+                "sandbox_strategy": "temporary_project_copy_npm_build",
+                "target": str(root),
+                "validation_commands": [" ".join(command) for command in commands],
+            },
+        )
+
+    def _apply_framework_multi_file(self, safe_block: Dict, validation: PatchValidationResult) -> Dict:
+        files = safe_block.get("files") or []
+        backups = []
+        created_files = []
+        try:
+            for item in files:
+                path = Path(item["file_path"])
+                path.parent.mkdir(parents=True, exist_ok=True)
+                if path.exists():
+                    backup_path = create_backup(str(path))
+                    backups.append({"target": str(path), "backup": str(backup_path)})
+                else:
+                    created_files.append(str(path))
+                path.write_text(item.get("new_text", ""), encoding="utf-8")
+        except Exception as exc:
+            for row in backups:
+                try:
+                    shutil.copyfile(row["backup"], row["target"])
+                except OSError:
+                    pass
+            return {
+                "applied": False,
+                "backup": backups[0]["backup"] if backups else "",
+                "reason": f"Framework patch apply failed; restored backups where possible. {exc}",
+                "rollback_metadata": {
+                    "backups": backups,
+                    "created_files": created_files,
+                    "restored_original": True,
+                    "sandbox_validated": bool((validation.rollback_metadata or {}).get("sandbox_validated")),
+                },
+            }
+        return {
+            "applied": True,
+            "backup": backups[0]["backup"] if backups else "",
+            "reason": "Framework patch applied after sandbox project validation.",
+            "patch": safe_block.get("patch", ""),
+            "rollback_metadata": {
+                "backup": backups[0]["backup"] if backups else "",
+                "backups": backups,
+                "created_files": created_files,
+                "restored_original": False,
+                "sandbox_validated": True,
+                "target": safe_block.get("file_path", ""),
+            },
+        }
+
+    def _common_root(self, paths: list[Path]) -> Path | None:
+        resolved = [path.resolve() for path in paths if path]
+        if not resolved:
+            return None
+        marker_names = {"package.json", "pyproject.toml", "manage.py", "artisan"}
+        current = resolved[0].parent
+        while current != current.parent:
+            if any((current / marker).exists() for marker in marker_names):
+                if all(self._is_relative_to(path, current) for path in resolved):
+                    return current
+            current = current.parent
+        return None
+
+    def _is_relative_to(self, path: Path, root: Path) -> bool:
+        try:
+            path.resolve().relative_to(root.resolve())
+            return True
+        except ValueError:
+            return False
 
     def _validate_php_in_sandbox(self, file_path: Path, old_text: str, old_lines: list[str], safe_block: Dict) -> PatchValidationResult:
         new_lines = old_lines[:]

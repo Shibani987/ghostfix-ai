@@ -18,6 +18,7 @@ Current safe examples include:
 - Simple Python missing-colon SyntaxError patches
 - Simple JSONDecodeError empty-input guards
 - Tiny JS/TS one-line repairs from the deterministic JS/TS allowlist
+- Selected JS/TS framework patches that pass temporary project-copy validation
 - Simple PHP missing-semicolon repairs from the deterministic PHP allowlist
 
 ## When Auto-Fix Is Blocked
@@ -45,7 +46,7 @@ Examples:
 
 ## Why Broad JavaScript And PHP Auto-Fix Are Disabled
 
-JavaScript and PHP are diagnosis-first. GhostFix can parse and explain common runtime errors, but edits are limited to tiny deterministic allowlists with patch preview, confirmation, rollback metadata, and sandbox validation.
+JavaScript and TypeScript are diagnosis-first with guarded validated allowlists and a bounded autonomous sandbox agent for supported safe cases. PHP is diagnosis-first only with legacy tiny deterministic previews. GhostFix can parse and explain common runtime errors, but edits are limited to explicit allowlists with patch preview, confirmation, rollback metadata, and sandbox validation.
 
 Reasons:
 

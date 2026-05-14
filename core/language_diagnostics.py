@@ -6,7 +6,9 @@ from pathlib import Path
 from typing import Any
 
 from core.js_autofix import build_js_patch_plan, patch_block_from_plan
+from core.framework_fixer import build_framework_patch_plan, patch_block_from_framework_plan
 from core.php_autofix import build_php_patch_plan, patch_block_from_plan as php_patch_block_from_plan
+from core.patch_validator import PatchValidator
 from core.repo_engine import build_repo_snapshot, classify_failure, compute_confidence, is_sensitive_target, structured_plan_from_patch_block
 from core.runtime_detector import infer_runtime_profile
 
@@ -394,7 +396,7 @@ def _attach_repo_plan_metadata(diagnostic: dict[str, Any], repo_snapshot, comman
         validation_available=bool(patch_block.get("validation")),
         sensitive_target=bool(file_path and is_sensitive_target(file_path)),
         exact_match=bool(patch_block.get("available")),
-        external_dependency=diagnostic.get("root_cause") in {
+        external_dependency=not bool(patch_block.get("available")) and diagnostic.get("root_cause") in {
             "ollama_connection_failed",
             "localhost_connection_refused",
             "backend_connection_refused",
@@ -487,6 +489,26 @@ def _attach_php_patch_metadata(diagnostic: dict[str, Any], cwd: str | None) -> N
 def _attach_js_patch_metadata(diagnostic: dict[str, Any], cwd: str | None) -> None:
     if diagnostic.get("language") not in {"javascript/node", "typescript"}:
         return
+    framework_plan = build_framework_patch_plan(diagnostic, cwd=cwd)
+    if framework_plan.available:
+        patch_block = patch_block_from_framework_plan(framework_plan)
+        validation = PatchValidator().validate(patch_block)
+        if not validation.ok:
+            diagnostic["safety_reason"] = "Framework patch validation failed."
+            diagnostic["why_auto_fix_blocked"] = validation.reason
+            return
+        diagnostic["auto_fix_available"] = True
+        diagnostic["safe_to_autofix"] = True
+        diagnostic["patch_preview"] = framework_plan.preview
+        diagnostic["patch_block"] = patch_block
+        diagnostic["safety_reason"] = validation.reason
+        diagnostic["why_auto_fix_blocked"] = ""
+        diagnostic["validation_result"] = validation.reason
+        return
+    if diagnostic.get("root_cause") == "ollama_connection_failed" and diagnostic.get("framework") == "next.js":
+        diagnostic["safety_reason"] = "Framework-safe Ollama patch planner could not produce a validated patch."
+        diagnostic["why_auto_fix_blocked"] = framework_plan.reason
+        return
     if _js_auto_fix_forbidden(diagnostic):
         diagnostic["safety_reason"] = "Auto-fix is disabled for non-Python languages."
         diagnostic["why_auto_fix_blocked"] = _js_block_reason(diagnostic)
@@ -502,6 +524,59 @@ def _attach_js_patch_metadata(diagnostic: dict[str, Any], cwd: str | None) -> No
     diagnostic["patch_block"] = patch_block_from_plan(plan)
     diagnostic["safety_reason"] = plan.validation or "Allowlisted deterministic JS/TS patch preview."
     diagnostic["why_auto_fix_blocked"] = ""
+    _attach_iterative_validation_if_available(diagnostic, cwd)
+
+
+def _attach_iterative_validation_if_available(diagnostic: dict[str, Any], cwd: str | None) -> None:
+    import os
+
+    if os.environ.get("GHOSTFIX_ITERATIVE_DISABLED") == "1":
+        return
+    root = Path(cwd or ".")
+    package = root / "package.json"
+    has_build = False
+    if package.exists():
+        try:
+            package_data = json.loads(package.read_text(encoding="utf-8"))
+        except Exception:
+            package_data = {}
+        scripts = package_data.get("scripts") if isinstance(package_data, dict) else {}
+        has_build = isinstance(scripts, dict) and "build" in scripts
+    if not has_build and not (root / "tsconfig.json").exists():
+        return
+    try:
+        from core.iterative_agent import iterative_validate_patch
+
+        result = iterative_validate_patch(
+            diagnostic,
+            diagnostic.get("patch_block") or {},
+            command="npm run build" if has_build else "tsc --noEmit",
+            cwd=str(root),
+        )
+    except Exception as exc:
+        diagnostic["iterative_validation"] = {"ok": False, "reason": f"Iterative validation unavailable: {exc}"}
+        diagnostic["safety_reason"] = "Iterative project validation unavailable; fallback sandbox validation still required before apply."
+        return
+    diagnostic["iterative_validation"] = result.to_dict()
+    diagnostic["retry_loop_telemetry"] = [item for item in result.to_dict().get("telemetry", [])]
+    diagnostic["patch_confidence"] = result.confidence
+    diagnostic["regression_detected"] = result.regression_detected
+    diagnostic["rollback_verification"] = result.rollback_verified
+    if not result.ok:
+        if "unparsed error" in result.reason.lower() or "no framework-aware validation command" in result.reason.lower():
+            diagnostic["iterative_validation"] = result.to_dict()
+            diagnostic["retry_loop_telemetry"] = [item for item in result.to_dict().get("telemetry", [])]
+            diagnostic["safety_reason"] = "Iterative project validation unavailable; fallback sandbox validation still required before apply."
+            return
+        diagnostic["auto_fix_available"] = False
+        diagnostic["safe_to_autofix"] = False
+        diagnostic["why_auto_fix_blocked"] = result.reason
+        diagnostic["safety_reason"] = "Iterative validation did not converge."
+        return
+    diagnostic["patch_block"] = result.patch_block
+    diagnostic["patch_preview"] = result.patch_block.get("patch", "")
+    diagnostic["confidence"] = max(int(diagnostic.get("confidence") or 0), result.confidence)
+    diagnostic["safety_reason"] = result.reason
 
 
 def _js_auto_fix_forbidden(diagnostic: dict[str, Any]) -> bool:
