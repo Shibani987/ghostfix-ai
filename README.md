@@ -238,7 +238,7 @@ For a local wheel rehearsal:
 
 ```powershell
 python -m build
-python -m pip install dist\ghostfix_ai-0.6.0-py3-none-any.whl
+python -m pip install dist\ghostfix_ai-0.7.0-py3-none-any.whl
 ghostfix --version
 ```
 
@@ -348,7 +348,7 @@ Useful options:
 - `--brain-mode auto|off|route-only|generate`: select Brain v4 runtime behavior.
 - `--fix`: allow the existing deterministic Python auto-fix prompts.
 
-Watch mode does not silently rewrite code. Non-Python errors remain diagnosis-only.
+Watch mode does not silently rewrite code. Non-Python edits remain limited to explicit guarded allowlists; everything else is diagnosis-only.
 
 ## Repo Context
 
@@ -401,7 +401,7 @@ Repeated adjacent duplicates are suppressed so a crashing watch command does not
 python -m cli.main run tests/manual_errors/json_empty_v2.py --fix
 ```
 
-Auto-fix is intentionally narrow. GhostFix creates a `*.bak_YYYYMMDD_HHMMSS` backup, validates the generated Python patch, and only applies fixes covered by the safe policy. Missing packages, framework config errors, JavaScript, TypeScript, PHP, and ambiguous project-intent cases are blocked.
+Auto-fix is intentionally narrow. GhostFix creates a `*.bak_YYYYMMDD_HHMMSS` backup for normal file edits, validates patches in a sandbox, and only applies fixes covered by the safe policy. Missing packages, framework config errors, broad JavaScript/TypeScript/PHP edits, and ambiguous project-intent cases are blocked.
 
 For auto-fix, GhostFix validates the patch in a temporary sandbox copy before touching the real file. Incident records include rollback metadata when a patch is attempted.
 
@@ -484,7 +484,7 @@ GhostFix uses a hybrid pipeline:
 8. Use retrieval and optional local reasoning for broader diagnosis.
 9. Route hard cases to Brain v4 when enabled.
 10. Generate a diagnosis, confidence, likely cause, and suggested fix.
-11. Offer auto-fix only when the safety policy allows a deterministic Python patch.
+11. Offer auto-fix only when the safety policy allows a deterministic allowlisted patch.
 12. Write local incident history for later review.
 
 Beginner-friendly details are in [docs/PROJECT_OVERVIEW.md](docs/PROJECT_OVERVIEW.md). A comparison with other tools is in [docs/WHY_DIFFERENT.md](docs/WHY_DIFFERENT.md).
@@ -504,7 +504,7 @@ Generated reports, caches, local environment files, local feedback/runtime state
 ## Limitations
 
 - Python is the mature path.
-- JavaScript, TypeScript, and PHP support is diagnosis-only.
+- JavaScript, TypeScript, and PHP support is diagnosis-first with only tiny guarded allowlisted patch paths.
 - Auto-fix is deliberately conservative.
 - Brain v4 requires compatible local model files and optional ML dependencies.
 - Brain v4 generation can be slow on CPU.

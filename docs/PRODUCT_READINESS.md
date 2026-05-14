@@ -2,7 +2,7 @@
 
 ## Current Status
 
-GhostFix is demo-ready as a local-first debugging assistant. Python is the mature support path. Django, Flask, and FastAPI/Uvicorn runtime diagnosis are supported. JavaScript/Node.js and PHP are supported in detection-only mode.
+GhostFix is demo-ready as a local-first debugging assistant. Python is the mature support path. Django, Flask, and FastAPI/Uvicorn runtime diagnosis are supported. JavaScript/Node.js and PHP are diagnosis-first with only tiny guarded patch allowlists.
 
 GhostFix requires no cloud inference. It uses deterministic rules, memory, a TF-IDF retriever, optional local embeddings, optional local LLM reasoning, and local Brain artifacts.
 
@@ -25,7 +25,7 @@ Python frameworks:
 - FastAPI/Uvicorn bad import
 - FastAPI app object not found
 
-Detection-only:
+Diagnosis-first:
 
 - JavaScript/Node ReferenceError
 - JavaScript module not found
@@ -49,7 +49,7 @@ Coverage includes:
 - Server traceback parsing
 - Framework detection isolation
 - Human-readable framework explanations
-- JS/PHP detection-only diagnostics
+- JS/PHP diagnosis-first diagnostics with tiny guarded patch allowlists
 - Optional retriever fallback behavior
 - Optional local LLM fallback and safety behavior
 - Demo report generation
@@ -79,9 +79,9 @@ Skipped scenarios are allowed when optional runtimes such as PHP are not install
 
 ## Known Limitations
 
-- Python is mature; JavaScript and PHP are detection-only.
+- Python is mature; JavaScript and PHP are diagnosis-first.
 - Framework auto-fix is blocked by design.
-- JavaScript/PHP auto-fix is disabled.
+- Broad JavaScript/PHP auto-fix is disabled outside explicit guarded allowlists.
 - Optional embeddings require `sentence-transformers` and a local model already on disk.
 - Optional local LLM reasoning requires `transformers` and a local causal/instruct code model already on disk.
 - Local LLM output is advisory and never enables auto-fix by itself.

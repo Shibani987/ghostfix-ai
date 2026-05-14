@@ -17,14 +17,14 @@ Good beta users are developers who:
 - Python tracebacks
 - Django, Flask, and FastAPI startup/runtime failures
 - local watch-mode diagnosis for dev servers
-- checking whether a deterministic Python patch is available
+- checking whether a deterministic allowlisted patch is available
 - using dry-run to preview behavior before trusting auto-fix
 
 ## What Not To Expect
 
 - no enterprise production readiness claim
 - no broad autonomous coding
-- no JavaScript, TypeScript, PHP, or Node auto-fix
+- no broad JavaScript, TypeScript, PHP, or Node auto-fix outside the explicit guarded allowlists
 - no dependency installation
 - no multi-file project refactors
 - no guarantee that Brain v4 is available or fast on every laptop

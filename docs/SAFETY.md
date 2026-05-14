@@ -1,10 +1,10 @@
 # Safety
 
-GhostFix is intentionally conservative. It diagnoses many errors, but it only edits code in a narrow set of safe Python cases.
+GhostFix is intentionally conservative. It diagnoses many errors, but it only edits code through narrow deterministic allowlists. Python is the mature path; JS/TS and PHP edits are tiny guarded patch paths only.
 
 ## Auto-Fix Is Limited
 
-Auto-fix is not a general model-powered rewrite system. It is allowed only when GhostFix has a deterministic patch plan for an allowlisted Python error type and validation passes.
+Auto-fix is not a general model-powered rewrite system. It is allowed only when GhostFix has a deterministic patch plan for an allowlisted error type and validation passes.
 
 Examples of blocked cases include:
 
@@ -12,7 +12,7 @@ Examples of blocked cases include:
 - Framework configuration.
 - Project-specific runtime behavior.
 - Data-shape or business-logic ambiguity.
-- JavaScript, TypeScript, Node.js, and PHP errors.
+- JavaScript, TypeScript, Node.js, and PHP errors outside the explicit guarded allowlists.
 - Any case where the patch cannot be validated safely.
 
 ## Backups Are Created
@@ -35,9 +35,9 @@ Incident history stores rollback metadata for patch attempts, including backup l
 
 GhostFix does not use auto-fix to delete files, remove broad code sections, rewrite project configuration, install packages, or perform destructive migrations.
 
-## Non-Python Errors Are Diagnosis-Only
+## Non-Python Fixes Are Tiny Guarded Allowlists
 
-JavaScript, TypeScript, Node.js, and PHP support is currently for detection and explanation. GhostFix may suggest what to check, but it will not apply edits for those languages in the current MVP.
+JavaScript, TypeScript, Node.js, and PHP support is mostly for detection and explanation. GhostFix may offer a patch only for explicit low-risk allowlisted cases such as JS/TS one-line repairs or PHP missing-semicolon repair. Framework config, dependencies, services, auth, database, payment, network, secrets, and project-intent changes remain suggestion-only.
 
 ## Brain Output Is Advisory And Guarded
 
@@ -49,7 +49,7 @@ GhostFix may suppress Brain output when it is unavailable, malformed, too generi
 
 A fix can be applied only when:
 
-- The language is Python.
+- The language and patch kind are in the explicit allowlist.
 - The error type is allowlisted for deterministic auto-fix.
 - A concrete patch plan exists.
 - The patch does not change unrelated lines.

@@ -17,7 +17,7 @@ GhostFix is a production-minded local CLI MVP for developer debugging loops. It 
 
 ## Current Limitations
 
-- Python is the mature path; JavaScript, TypeScript, Node, and PHP are diagnosis-only.
+- Python is the mature path; JavaScript, TypeScript, Node, and PHP are diagnosis-first with only tiny guarded patch allowlists.
 - Repo-aware context is intentionally bounded and may miss deep project conventions.
 - Daemon v1 runs foreground-first and is not a full service manager.
 - Brain v4 requires compatible local model files and optional ML dependencies.

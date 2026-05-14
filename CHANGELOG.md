@@ -2,6 +2,21 @@
 
 All notable public-release changes are tracked here.
 
+## 0.7.0 - 2026-05-14
+
+### Added
+
+- Repo-aware engine coverage for Python, JavaScript/TypeScript, and PHP source snapshots.
+- Guarded JS/TS export-mismatch patch previews for exact local default-export or spelling/case repairs.
+- Guarded PHP missing-semicolon patch previews with sandbox validation and optional `php -l`.
+- Expanded release and beta validation around rollback, trust-and-safety, and package hygiene.
+
+### Safety
+
+- Broad JavaScript, TypeScript, PHP, framework config, dependency install, auth, database, payment, network, secret, and destructive filesystem fixes remain blocked.
+- Non-Python edits are limited to explicit deterministic allowlists with patch preview, confirmation, audit, backup or rollback metadata, and sandbox validation.
+- Brain, local LLM, and retriever confidence still cannot bypass the safety policy.
+
 ## 0.6.0 - 2026-05-13
 
 ### Added

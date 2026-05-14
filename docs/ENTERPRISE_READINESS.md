@@ -7,7 +7,7 @@ GhostFix is an enterprise-evaluation-ready local debugging CLI candidate. It is 
 ## Enterprise-Ready Today
 
 - Local-first CLI operation with no automatic cloud telemetry.
-- Deterministic Python auto-fix only for a narrow allowlist.
+- Deterministic auto-fix only for narrow allowlists, with Python as the mature path.
 - Safety policy remains the final auto-fix gate.
 - Dry-run mode for diagnosis without file writes.
 - Local backup and rollback metadata for applied fixes.
@@ -19,12 +19,12 @@ GhostFix is an enterprise-evaluation-ready local debugging CLI candidate. It is 
 
 - Brain v4 routing/generation is optional and advisory.
 - Watch mode handles noisy and long-running local logs, but is not production observability.
-- Non-Python languages are diagnosis-only.
+- Non-Python languages are diagnosis-first with only tiny guarded allowlisted patch paths.
 - Release validation provides local readiness evidence, not a compliance certification.
 
 ## Explicitly Not Supported
 
-- JavaScript, TypeScript, or PHP auto-fix.
+- Broad JavaScript, TypeScript, or PHP auto-fix.
 - Brain/LLM/retriever confidence enabling auto-fix.
 - Unrestricted autonomous code editing.
 - Cloud telemetry by default.
@@ -38,7 +38,7 @@ GhostFix stores runtime state locally under `.ghostfix/` and local ML feedback u
 ## Safety Guarantees
 
 - Dry-run never applies patches.
-- Auto-fix requires a deterministic allowlisted Python patch.
+- Auto-fix requires a deterministic allowlisted patch; Python is the mature path.
 - Validation runs before real file modification.
 - Backups are created before modification.
 - Rollback restores from recorded backup metadata with confirmation.
@@ -70,7 +70,7 @@ python -m twine check dist/*
 
 ## Recommended Path To v1.0
 
-1. Keep auto-fix limited to deterministic validated Python patches.
+1. Keep auto-fix limited to deterministic validated allowlisted patches, with Python as the mature path.
 2. Stabilize CLI JSON outputs and exit-code contracts.
 3. Add signed release automation and release provenance.
 4. Expand Windows, macOS, and Linux smoke coverage in CI.

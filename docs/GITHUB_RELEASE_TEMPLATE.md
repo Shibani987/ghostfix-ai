@@ -40,4 +40,4 @@ python -m twine check dist/*
 
 GhostFix is enterprise-evaluation-ready as a local debugging CLI candidate. It is not a hosted enterprise platform, autonomous coding agent, or production observability replacement.
 
-JavaScript, TypeScript, and PHP support remain diagnosis-only.
+JavaScript, TypeScript, and PHP support remain diagnosis-first with only tiny guarded allowlisted patch paths.

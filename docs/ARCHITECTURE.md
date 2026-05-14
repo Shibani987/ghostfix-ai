@@ -83,7 +83,7 @@ After log-event normalization, the parser extracts structured signals from noisy
 - missing environment variables
 - port conflicts
 
-The runtime detector classifies logs as Python, JavaScript/Node, TypeScript, or unknown. Non-Python errors receive diagnosis and suggested fixes only.
+The runtime detector classifies logs as Python, JavaScript/Node, TypeScript, PHP, or unknown. Non-Python errors are diagnosis-first; only explicit low-risk JS/TS and PHP allowlisted repairs may produce patch previews.
 
 ### Repo-Aware Context
 
@@ -137,7 +137,7 @@ Brain v4 output is advisory:
 
 ### Safety And Auto-Fix
 
-The safety policy is the final gate. Auto-fix is limited to deterministic safe Python cases with patch validation, temporary sandbox validation, patch preview, user confirmation, backup behavior, and rollback metadata.
+The safety policy is the final gate. Auto-fix is limited to deterministic safe allowlists with patch validation, temporary sandbox validation, patch preview, user confirmation, backup behavior, and rollback metadata.
 
 Blocked cases include:
 

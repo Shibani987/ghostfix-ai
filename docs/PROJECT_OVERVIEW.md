@@ -8,7 +8,7 @@ Runtime errors are noisy. A traceback or dev-server log may include many lines, 
 
 ## The Solution
 
-GhostFix watches the command that failed, extracts the important evidence, and explains the most likely root cause. For a small set of safe Python cases, it can also preview and apply a deterministic fix after passing safety checks.
+GhostFix watches the command that failed, extracts the important evidence, and explains the most likely root cause. For a small set of safe deterministic cases, it can also preview and apply a fix after passing safety checks. Python is the mature path; JS/TS and PHP edits are intentionally tiny guarded allowlists.
 
 The core idea is simple: no prompts, just logs, instant fixes when they are safe.
 
@@ -72,7 +72,7 @@ Auto-fix is blocked for ambiguous cases, framework configuration, missing packag
 
 Python is the mature path. GhostFix can diagnose Python tracebacks and common Django, Flask, FastAPI, and Uvicorn failures.
 
-JavaScript, Node.js, TypeScript-style dev logs, and PHP errors are supported for detection and diagnosis only. They do not receive auto-fixes in the current MVP.
+JavaScript, Node.js, TypeScript-style dev logs, and PHP errors are supported for detection and diagnosis. Broad non-Python auto-fix remains disabled, but tiny guarded JS/TS and PHP patch previews may be offered when an exact allowlisted source repair is available.
 
 ## Current Product Direction
 

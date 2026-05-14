@@ -53,9 +53,9 @@ GhostFix detects common Node, Next.js, React, and TypeScript dev-server errors,
 including module-not-found, missing environment variables, build/syntax errors,
 port conflicts, TypeScript type errors, and hydration-style messages.
 
-These errors are diagnosis-only in the current release. GhostFix prints a
-suggested fix, but it does not edit JavaScript or TypeScript files and it does
-not run package-manager install commands.
+These errors are diagnosis-first in the current release. GhostFix prints a
+suggested fix, and only offers JS/TS patch previews for tiny guarded allowlisted
+source repairs. It does not run package-manager install commands.
 
 ## Rollback
 

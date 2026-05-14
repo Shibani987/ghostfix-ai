@@ -4,7 +4,7 @@ GhostFix auto-fix is deliberately conservative. The safety policy is the final g
 
 ## When Auto-Fix Is Allowed
 
-Auto-fix is allowed only for small deterministic Python cases when all of these are true:
+Auto-fix is allowed only for small deterministic allowlisted cases when all of these are true:
 
 - The error type is allowlisted.
 - The case is classified as deterministic and safe.
@@ -17,6 +17,8 @@ Current safe examples include:
 
 - Simple Python missing-colon SyntaxError patches
 - Simple JSONDecodeError empty-input guards
+- Tiny JS/TS one-line repairs from the deterministic JS/TS allowlist
+- Simple PHP missing-semicolon repairs from the deterministic PHP allowlist
 
 ## When Auto-Fix Is Blocked
 
@@ -30,7 +32,7 @@ Auto-fix is blocked for:
 - Invalid or unavailable patches
 - Unsafe Brain metadata
 - Local LLM-only diagnoses
-- JavaScript and PHP
+- JavaScript, TypeScript, and PHP outside the explicit guarded allowlists
 - Any error type outside the auto-fix allowlist
 
 Examples:
@@ -41,9 +43,9 @@ Examples:
 - Permission errors
 - NameError or KeyError cases that may require intent
 
-## Why JavaScript And PHP Auto-Fix Are Disabled
+## Why Broad JavaScript And PHP Auto-Fix Are Disabled
 
-JavaScript and PHP are currently detection-only. GhostFix can parse and explain common runtime errors, but it does not edit JS/PHP files yet.
+JavaScript and PHP are diagnosis-first. GhostFix can parse and explain common runtime errors, but edits are limited to tiny deterministic allowlists with patch preview, confirmation, rollback metadata, and sandbox validation.
 
 Reasons:
 
