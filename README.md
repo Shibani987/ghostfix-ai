@@ -1,0 +1,167 @@
+# 👻 GhostFix
+
+**AI-powered terminal error watcher & auto-fixer.**  
+Watch any command, detect errors, find the root cause, generate a patch, apply it — all from your terminal.
+
+---
+
+## Install
+
+```bash
+pip install ghostfix
+# or from source:
+git clone https://github.com/you/ghostfix && cd ghostfix
+pip install -e .
+```
+
+---
+
+## Usage
+
+### Cloud AI mode (`--ai`)
+
+```bash
+# First run: will ask which provider + API key (saved to ~/.ghostfix/config.json)
+ghostfix watch "npm run server" --fix --ai
+ghostfix watch "python manage.py runserver" --fix --ai
+ghostfix watch "flask run" --fix --ai --provider claude
+ghostfix watch "go run main.go" --fix --ai
+ghostfix watch "python train.py" --fix --ai
+```
+
+### Custom / local model mode
+
+Create `ghostfix.config.py` in your project root:
+
+```python
+GHOSTFIX_CONFIG = {
+    "model": {
+        "type": "custom",
+        "endpoint": "http://localhost:11434/api/chat",  # Ollama
+        "model_name": "codellama:13b",
+    },
+    "fix": { "auto_apply": False }
+}
+```
+
+Then run **without** `--ai`:
+```bash
+ghostfix watch "python app.py" --fix
+```
+
+---
+
+## Commands
+
+| Command | Description |
+|---|---|
+| `ghostfix watch "CMD" --fix --ai` | Watch + fix with cloud AI |
+| `ghostfix watch "CMD" --fix` | Watch + fix with custom model |
+| `ghostfix watch "CMD"` | Watch only, no fixing |
+| `ghostfix setup` | Configure AI provider interactively |
+| `ghostfix init` | Create `ghostfix.config.py` in current dir |
+| `ghostfix config-show` | Show current config |
+
+### Flags
+
+| Flag | Description |
+|---|---|
+| `--fix` | Enable auto-fix pipeline |
+| `--ai` | Use cloud AI (OpenAI / Claude / Gemini) |
+| `--provider` | Force provider: `openai`, `claude`, `gemini` |
+| `--auto` | Apply patches without confirmation |
+| `--verbose` | Show extra debug info |
+
+---
+
+## Fix Pipeline
+
+```
+Error detected in output
+    ↓
+Parse: language, file, line, traceback
+    ↓
+Codebase search: find relevant files + context
+    ↓
+AI analysis: root cause + patch (unified diff)
+    ↓
+Show: Root Cause → Fix Suggestion → Patch
+    ↓
+Prompt: Apply? [y/n/e/s]
+    ↓
+Apply patch → restart command → verify
+```
+
+---
+
+## Custom Model Setup (no cloud needed)
+
+GhostFix works with **any OpenAI-compatible endpoint**.
+
+### Ollama (recommended for local)
+
+```bash
+# 1. Install Ollama
+curl -fsSL https://ollama.com/install.sh | sh
+
+# 2. Pull a code model
+ollama pull codellama:13b
+# or smaller:
+ollama pull deepseek-coder:6.7b
+
+# 3. ghostfix.config.py
+GHOSTFIX_CONFIG = {
+    "model": {
+        "type": "custom",
+        "endpoint": "http://localhost:11434/api/chat",
+        "model_name": "codellama:13b",
+    }
+}
+
+# 4. Run
+ghostfix watch "python app.py" --fix
+```
+
+### LM Studio
+
+```python
+GHOSTFIX_CONFIG = {
+    "model": {
+        "type": "custom",
+        "endpoint": "http://localhost:1234",   # LM Studio default
+        "model_name": "local-model",
+    }
+}
+```
+
+### Your own server
+
+Your server must accept:
+```
+POST /v1/chat/completions
+{ "model": "...", "messages": [{"role":"system","content":"..."},{"role":"user","content":"..."}] }
+```
+And return:
+```json
+{ "choices": [{ "message": { "content": "..." } }] }
+```
+
+---
+
+## Supported Languages
+
+| Language | Error Detection | Stack Trace Parsing |
+|---|---|---|
+| Python / Django / Flask | ✅ | ✅ |
+| Node.js / Express / TypeScript | ✅ | ✅ |
+| Java | ✅ | ✅ |
+| Go | ✅ | ✅ |
+| Rust | ✅ | ✅ |
+| Ruby | ✅ | ✅ |
+| Any (generic) | ✅ | partial |
+
+---
+
+## License
+
+MIT

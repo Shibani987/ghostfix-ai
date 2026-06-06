@@ -1,0 +1,30 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "ghostfix"
+version = "0.1.0"
+description = "AI-powered terminal error watcher and auto-fixer for any project"
+readme = "README.md"
+requires-python = ">=3.9"
+license = {text = "MIT"}
+keywords = ["ai", "debugging", "cli", "auto-fix", "developer-tools"]
+dependencies = [
+    "click>=8.0",
+    "rich>=13.0",
+    "httpx>=0.24",
+    "pydantic>=2.0",
+    "gitpython>=3.1",
+    "prompt_toolkit>=3.0",
+]
+
+[project.scripts]
+ghostfix = "ghostfix.cli:main"
+
+[project.optional-dependencies]
+dev = ["pytest", "black", "mypy"]
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["ghostfix*"]

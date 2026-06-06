@@ -1,0 +1,2 @@
+[console_scripts]
+ghostfix = ghostfix.cli:main

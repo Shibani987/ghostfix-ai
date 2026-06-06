@@ -1,0 +1,11 @@
+click>=8.0
+rich>=13.0
+httpx>=0.24
+pydantic>=2.0
+gitpython>=3.1
+prompt_toolkit>=3.0
+
+[dev]
+pytest
+black
+mypy
