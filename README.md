@@ -6,6 +6,14 @@ GhostFix watches any command, detects runtime errors, gathers the relevant code 
 
 ![GhostFix demo](docs/assets/ghostfix-demo.gif)
 
+## See GhostFix in Action
+
+<video src="docs/assets/Screen%20Recording%202026-06-06%20143114.mp4" controls width="100%">
+  Watch the GhostFix demo video.
+</video>
+
+[Watch the demo video](docs/assets/Screen%20Recording%202026-06-06%20143114.mp4)
+
 [![PyPI](https://img.shields.io/badge/pypi-ghostfix-6d4aff)](https://pypi.org/project/ghostfix/)
 [![Python](https://img.shields.io/badge/python-3.9%2B-2f8fcb)](https://www.python.org/)
 [![License](https://img.shields.io/badge/license-MIT-111827)](LICENSE)

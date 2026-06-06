@@ -6,3 +6,4 @@ include SECURITY.md
 recursive-include docs *.md
 include docs/make_demo_gif.py
 recursive-include docs/assets *.gif
+recursive-include docs/assets *.mp4
