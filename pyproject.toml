@@ -8,7 +8,7 @@ version = "0.1.0"
 description = "AI-powered terminal error watcher and auto-fixer for any project"
 readme = "README.md"
 requires-python = ">=3.9"
-license = {text = "MIT"}
+license = "MIT"
 keywords = ["ai", "debugging", "cli", "auto-fix", "developer-tools"]
 dependencies = [
     "click>=8.0",
