@@ -9,8 +9,10 @@ GhostFix watches any command, detects runtime errors, gathers the relevant code 
 ## See GhostFix in Action
 
 <video src="docs/assets/Screen%20Recording%202026-06-06%20143114.mp4" controls width="100%">
-  Watch the GhostFix demo video.
+Watch the GhostFix demo video.
 </video>
+![GhostFix demo](docs/assets/Screen Recording 2026-06-06 143114.gif)
+
 
 [Watch the demo video](docs/assets/Screen%20Recording%202026-06-06%20143114.mp4)
 
