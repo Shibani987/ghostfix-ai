@@ -88,10 +88,17 @@ class ConfigManager:
     # ------------------------------------------------------------------ #
     #  Interactive AI setup                                                #
     # ------------------------------------------------------------------ #
-    def ensure_ai_provider(self, cfg: dict, force_provider: str | None = None) -> dict:
+    def ensure_ai_provider(
+        self,
+        cfg: dict,
+        force_provider: str | None = None,
+        *,
+        prompt_each_run: bool = False,
+        save: bool = True,
+    ) -> dict:
         """Make sure an AI cloud provider + API key is configured."""
         # Already have everything?
-        if cfg.get("provider") and cfg.get("api_key") and not force_provider:
+        if cfg.get("provider") and cfg.get("api_key") and not force_provider and not prompt_each_run:
             console.print(
                 f"[dim]🔑 Using saved provider: [bold]{cfg['provider']}[/bold][/dim]"
             )
@@ -100,13 +107,11 @@ class ConfigManager:
         # Choose provider
         if force_provider:
             provider = force_provider
-        elif cfg.get("provider") and not force_provider:
-            provider = cfg["provider"]
         else:
             provider = self._prompt_provider()
 
         # Ask for API key
-        existing_key = cfg.get("api_key", "")
+        existing_key = "" if prompt_each_run else cfg.get("api_key", "")
         if existing_key:
             mask = existing_key[:8] + "..."
             use_saved = Confirm.ask(
@@ -130,14 +135,17 @@ class ConfigManager:
 
         cfg["provider"] = provider
         cfg["api_key"] = existing_key
-        self._save_global(cfg)
-        console.print(f"\n[green]✅  Provider saved:[/green] {provider}\n")
+        if save:
+            self._save_global(cfg)
+            console.print(f"\n[green]✅  Provider saved:[/green] {provider}\n")
+        else:
+            console.print(f"\n[green]✅  Provider selected for this run:[/green] {provider}\n")
         return cfg
 
     def _prompt_provider(self) -> str:
         console.print(
             Panel(
-                "\n".join(f"  [bold]{k}[/bold].  {v}" for k, v in PROVIDERS.values()),
+                "\n".join(f"  [bold]{k}[/bold].  {label}" for k, (_, label) in PROVIDERS.items()),
                 title="[bold cyan]Choose AI Provider[/bold cyan]",
                 border_style="cyan",
                 padding=(1, 2),

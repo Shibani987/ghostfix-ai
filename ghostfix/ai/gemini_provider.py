@@ -7,7 +7,7 @@ class GeminiProvider(BaseProvider):
         self.api_key = api_key
         self.url = (
             f"https://generativelanguage.googleapis.com/v1beta/models/"
-            f"gemini-1.5-pro:generateContent?key={api_key}"
+            f"gemini-2.5-flash:generateContent?key={api_key}"
         )
 
     def complete(self, system: str, user: str) -> str | None:

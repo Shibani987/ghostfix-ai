@@ -56,7 +56,12 @@ def watch(command, fix, ai, provider, auto, config, verbose):
 
     # If --ai flag, ensure provider is configured
     if ai:
-        cfg = cfg_manager.ensure_ai_provider(cfg, force_provider=provider)
+        cfg = cfg_manager.ensure_ai_provider(
+            cfg,
+            force_provider=provider,
+            prompt_each_run=True,
+            save=False,
+        )
 
     elif not cfg.get("model"):
         # No --ai and no config model → prompt user

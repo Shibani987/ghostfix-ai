@@ -1,167 +1,193 @@
-# 👻 GhostFix
+# GhostFix
 
-**AI-powered terminal error watcher & auto-fixer.**  
-Watch any command, detect errors, find the root cause, generate a patch, apply it — all from your terminal.
+**AI-powered terminal error watcher and auto-fixer.**
 
----
+GhostFix watches any command, detects runtime errors, gathers the relevant code context, asks an AI provider for a focused unified-diff patch, and applies the fix from your terminal.
+
+![GhostFix demo](docs/assets/ghostfix-demo.gif)
+
+[![PyPI](https://img.shields.io/badge/pypi-ghostfix-6d4aff)](https://pypi.org/project/ghostfix/)
+[![Python](https://img.shields.io/badge/python-3.9%2B-2f8fcb)](https://www.python.org/)
+[![License](https://img.shields.io/badge/license-MIT-111827)](LICENSE)
+[![CLI](https://img.shields.io/badge/cli-rich%20%2B%20click-ff4f87)](https://github.com/Shibani987/ghostfix-ai)
+
+## Why GhostFix?
+
+Development servers, test runners, CLIs, scripts, and training jobs fail in noisy ways. GhostFix sits beside the command, reads the error stream, finds the file and line that matter, then proposes a small patch you can review before applying.
+
+GhostFix is built for developers who want fast repair loops without giving up control.
+
+## Features
+
+- Watch any shell command: Next.js, Django, Flask, pytest, Node, Go, Rust, Java, Ruby, and more.
+- Detect common error signals and parse stack traces across multiple languages.
+- Resolve source files from stack traces and collect nearby code context.
+- Use cloud providers: OpenAI, Claude, or Gemini.
+- Use local/custom models through Ollama, LM Studio, vLLM, or any OpenAI-compatible endpoint.
+- Generate unified-diff patches and apply them with `git apply` first.
+- Create backups in `.ghostfix_backups/` before patching.
+- Restart the watched command after a successful fix.
+- Limit repeated fixes for the same error with retry controls.
+- Keep humans in the loop by default with patch confirmation prompts.
 
 ## Install
 
 ```bash
 pip install ghostfix
-# or from source:
-git clone https://github.com/you/ghostfix && cd ghostfix
+```
+
+From source:
+
+```bash
+git clone https://github.com/Shibani987/ghostfix-ai.git
+cd ghostfix-ai
 pip install -e .
 ```
 
----
+Python 3.9 or newer is required.
 
-## Usage
+## Quick Start
 
-### Cloud AI mode (`--ai`)
+Cloud AI mode:
 
 ```bash
-# First run: will ask which provider + API key (saved to ~/.ghostfix/config.json)
-ghostfix watch "npm run server" --fix --ai
-ghostfix watch "python manage.py runserver" --fix --ai
-ghostfix watch "flask run" --fix --ai --provider claude
-ghostfix watch "go run main.go" --fix --ai
-ghostfix watch "python train.py" --fix --ai
+ghostfix watch "npm run dev" --fix --ai
 ```
 
-### Custom / local model mode
+GhostFix asks for the provider and API key each time `watch --ai` runs. This keeps new terminal sessions from silently reusing an old saved key.
 
-Create `ghostfix.config.py` in your project root:
+Force a provider but still enter the key for this run:
 
-```python
-GHOSTFIX_CONFIG = {
-    "model": {
-        "type": "custom",
-        "endpoint": "http://localhost:11434/api/chat",  # Ollama
-        "model_name": "codellama:13b",
-    },
-    "fix": { "auto_apply": False }
-}
-```
-
-Then run **without** `--ai`:
 ```bash
+ghostfix watch "python manage.py runserver" --fix --ai --provider gemini
+```
+
+Local/custom model mode:
+
+```bash
+ghostfix init
 ghostfix watch "python app.py" --fix
 ```
 
----
+Edit the generated `ghostfix.config.py` to point at Ollama, LM Studio, vLLM, or your own model server.
 
 ## Commands
 
 | Command | Description |
-|---|---|
-| `ghostfix watch "CMD" --fix --ai` | Watch + fix with cloud AI |
-| `ghostfix watch "CMD" --fix` | Watch + fix with custom model |
-| `ghostfix watch "CMD"` | Watch only, no fixing |
-| `ghostfix setup` | Configure AI provider interactively |
-| `ghostfix init` | Create `ghostfix.config.py` in current dir |
-| `ghostfix config-show` | Show current config |
+| --- | --- |
+| `ghostfix watch "CMD"` | Watch a command and print its output. |
+| `ghostfix watch "CMD" --fix --ai` | Watch and fix using a cloud AI provider. |
+| `ghostfix watch "CMD" --fix` | Watch and fix using `ghostfix.config.py` custom model settings. |
+| `ghostfix setup` | Save a default cloud provider/API key for setup workflows. |
+| `ghostfix init` | Create a project-level `ghostfix.config.py`. |
+| `ghostfix config-show` | Show the merged GhostFix configuration with masked API key. |
 
-### Flags
+## Flags
 
 | Flag | Description |
-|---|---|
-| `--fix` | Enable auto-fix pipeline |
-| `--ai` | Use cloud AI (OpenAI / Claude / Gemini) |
-| `--provider` | Force provider: `openai`, `claude`, `gemini` |
-| `--auto` | Apply patches without confirmation |
-| `--verbose` | Show extra debug info |
+| --- | --- |
+| `--fix` | Enable the AI repair pipeline when an error is detected. |
+| `--ai` | Use OpenAI, Claude, or Gemini instead of a custom model config. |
+| `--provider <name>` | Force `openai`, `claude`, or `gemini`. |
+| `--auto` | Apply patches without confirmation. Use carefully. |
+| `--config <path>` | Load a specific `ghostfix.config.py`. |
+| `--verbose` | Show extra renderer/debug output. |
 
----
+## How It Works
 
-## Fix Pipeline
-
+```text
+watched command fails
+        |
+        v
+error parser detects language, error type, file, and line
+        |
+        v
+context builder collects source snippets and project tree
+        |
+        v
+AI provider returns root cause, explanation, and unified diff
+        |
+        v
+GhostFix shows the fix and asks before applying
+        |
+        v
+patcher backs up files, applies patch, and restarts command
 ```
-Error detected in output
-    ↓
-Parse: language, file, line, traceback
-    ↓
-Codebase search: find relevant files + context
-    ↓
-AI analysis: root cause + patch (unified diff)
-    ↓
-Show: Root Cause → Fix Suggestion → Patch
-    ↓
-Prompt: Apply? [y/n/e/s]
-    ↓
-Apply patch → restart command → verify
-```
 
----
+## Configuration
 
-## Custom Model Setup (no cloud needed)
-
-GhostFix works with **any OpenAI-compatible endpoint**.
-
-### Ollama (recommended for local)
+Create a config file:
 
 ```bash
-# 1. Install Ollama
-curl -fsSL https://ollama.com/install.sh | sh
+ghostfix init
+```
 
-# 2. Pull a code model
-ollama pull codellama:13b
-# or smaller:
-ollama pull deepseek-coder:6.7b
+Example:
 
-# 3. ghostfix.config.py
+```python
 GHOSTFIX_CONFIG = {
     "model": {
         "type": "custom",
         "endpoint": "http://localhost:11434/api/chat",
         "model_name": "codellama:13b",
-    }
-}
-
-# 4. Run
-ghostfix watch "python app.py" --fix
-```
-
-### LM Studio
-
-```python
-GHOSTFIX_CONFIG = {
-    "model": {
-        "type": "custom",
-        "endpoint": "http://localhost:1234",   # LM Studio default
-        "model_name": "local-model",
-    }
+    },
+    "watch": {
+        "ignore": ["node_modules", ".git", "dist", "__pycache__"],
+        "max_file_size_kb": 500,
+        "context_lines": 60,
+    },
+    "fix": {
+        "auto_apply": False,
+        "create_backup": True,
+        "restart_on_fix": True,
+        "max_retries": 3,
+    },
 }
 ```
 
-### Your own server
+See [Configuration](docs/CONFIGURATION.md) and [Providers](docs/PROVIDERS.md).
 
-Your server must accept:
-```
-POST /v1/chat/completions
-{ "model": "...", "messages": [{"role":"system","content":"..."},{"role":"user","content":"..."}] }
-```
-And return:
-```json
-{ "choices": [{ "message": { "content": "..." } }] }
-```
+## Supported Error Families
 
----
+| Ecosystem | Detection | Stack trace parsing |
+| --- | --- | --- |
+| Python, Django, Flask | Yes | Yes |
+| Node.js, TypeScript, Next.js | Yes | Yes |
+| Java | Yes | Yes |
+| Go | Yes | Yes |
+| Rust | Yes | Yes |
+| Ruby | Yes | Yes |
+| Generic CLI output | Yes | Partial |
 
-## Supported Languages
+## Safety
 
-| Language | Error Detection | Stack Trace Parsing |
-|---|---|---|
-| Python / Django / Flask | ✅ | ✅ |
-| Node.js / Express / TypeScript | ✅ | ✅ |
-| Java | ✅ | ✅ |
-| Go | ✅ | ✅ |
-| Rust | ✅ | ✅ |
-| Ruby | ✅ | ✅ |
-| Any (generic) | ✅ | partial |
+GhostFix is designed to keep you in control:
 
----
+- Patches are shown before applying unless `--auto` is enabled.
+- Backups are created before patching by default.
+- The same error is not fixed forever; retry limits stop loops.
+- Project scanning ignores common generated folders.
+- API keys are masked in `config-show`.
+
+Read [Security](SECURITY.md) before using GhostFix on sensitive repositories.
+
+## Documentation
+
+- [Installation](docs/INSTALLATION.md)
+- [Configuration](docs/CONFIGURATION.md)
+- [Providers](docs/PROVIDERS.md)
+- [Architecture](docs/ARCHITECTURE.md)
+- [Troubleshooting](docs/TROUBLESHOOTING.md)
+- [Release Checklist](docs/RELEASE_CHECKLIST.md)
+- [Contributing](CONTRIBUTING.md)
+- [Changelog](CHANGELOG.md)
+
+## Release Status
+
+Current version: `0.1.0`
+
+This is an early release. The core loop is ready for testing, but patch quality depends on the chosen AI model and the context available in the error output.
 
 ## License
 
-MIT
+MIT. See [LICENSE](LICENSE).
